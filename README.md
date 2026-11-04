@@ -25,7 +25,9 @@ Version 0.4 helps new authors find readers, and helps libraries see what their c
   <img src="docs/screenshots/19-reader-demand.png" alt="The library side: requests as totals by book, with Add 3 copies" width="400">
 </p>
 
-![Readaroo: a held book with three Next-Up read-alikes](docs/screenshots/02-next-up.png)
+**[Try the live demo](https://hithakishore-all.github.io/readaroo/)**: it runs entirely in your browser with synthetic data, no install. Open the **Demo guide** and click any record, R1 to R19.
+
+![Readaroo v0.4 tour: Next-Up, parent approval, instant borrow under a cap, new authors, Ask my library and the librarian's demand view](docs/readaroo-demo.gif)
 
 > **All data is fictional.** Every family member, library, book and author is synthetic. Stripe runs in test mode only, and the app refuses to start with a live key.
 

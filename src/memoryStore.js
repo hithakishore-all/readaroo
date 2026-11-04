@@ -20,6 +20,7 @@
         approvals: [], feedback: [], meterEvents: [], events: [], demoRecords: s.demoRecords || [],
         sessions: s.sessions || [], tbr: s.tbr || [], shelves: s.shelves || [], follows: s.follows || [],
         meetups: s.meetups || [], rsvps: [],
+        authors: s.authors || [], community: s.community || [], libraryRequests: [], questions: [], recommendations: [],
       };
     }
     load();
@@ -135,6 +136,38 @@
       async releaseSeats(meetupId, n) {
         const m = db.meetups.find((x) => x.id === meetupId);
         m.seatsTaken = Math.max(0, m.seatsTaken - n);
+      },
+      // ---- v0.4: authors, reader demand, questions, recommendations
+      async listAuthors() { return clone(db.authors); },
+      async getAuthor(name) { const a = db.authors.find((x) => x.name === name); return a ? clone(a) : null; },
+      async listCommunity() { return clone(db.community); },
+      async listLibraryRequests() { return clone(db.libraryRequests); },
+      async addLibraryRequest(r) {
+        if (db.libraryRequests.some((x) => x.memberId === r.memberId && x.titleId === r.titleId)) return false;
+        db.libraryRequests.push(clone(r));
+        return true;
+      },
+      async markRequestsOrdered(titleId, libraryId, at) {
+        let n = 0;
+        for (const r of db.libraryRequests) if (r.titleId === titleId && r.libraryId === libraryId && r.status === 'requested') { r.status = 'ordered'; r.fulfilledAt = at; n++; }
+        for (const c of db.community) if (c.titleId === titleId && c.libraryId === libraryId) c.requests = 0;
+        return n;
+      },
+      // Digital licenses arrive at once: owned and available go up together
+      async addCopies(titleId, libraryId, n, asOf) {
+        const c = copy(titleId, libraryId);
+        if (c) { c.owned += n; c.available += n; c.asOf = asOf; return; }
+        db.copies.push({ titleId, libraryId, owned: n, available: n, queue: 0, asOf, ppuCents: null, onOrder: 0 });
+      },
+      async listQuestions() { return clone(db.questions); },
+      async addQuestion(x) { db.questions.push(clone(x)); },
+      async updateQuestion(id, patch) { Object.assign(db.questions.find((x) => x.id === id), patch); },
+      async bumpQuestionCount(meetupId) { db.meetups.find((m) => m.id === meetupId).questionCount += 1; },
+      async listRecommendations() { return clone(db.recommendations); },
+      async addRecommendation(r) {
+        if (db.recommendations.some((x) => x.fromMember === r.fromMember && x.toMember === r.toMember && x.titleId === r.titleId)) return false;
+        db.recommendations.push(clone(r));
+        return true;
       },
       async reset() { load(); },
     };

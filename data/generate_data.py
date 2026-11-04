@@ -90,6 +90,13 @@ TITLES = [
      "minAge": 8, "maxAge": 11, "themes": ["friendship", "ocean"], "color": "#2F7E8C"},
     {"id": "t-gnome-2", "title": "The Garden Gnome Club: Moonlight Market", "author": "June Adeyemi", "series": "Garden Gnome Club", "seriesNo": 2,
      "minAge": 5, "maxAge": 8, "themes": ["friendship", "night"], "color": "#4E7A33"},
+    # v0.4: debut authors. Bus 44 and Sora are not owned by the family's libraries yet ("Ask my library")
+    {"id": "t-bus44", "title": "Bus 44 to the Stars", "author": "Leo Park", "series": None, "seriesNo": None,
+     "minAge": 7, "maxAge": 10, "themes": ["space", "friendship"], "color": "#2B3F8F"},
+    {"id": "t-clockwork", "title": "The Clockwork Garden", "author": "Ada Mensah", "series": None, "seriesNo": None,
+     "minAge": 8, "maxAge": 11, "themes": ["mystery", "garden"], "color": "#8A5A1F"},
+    {"id": "t-sora", "title": "Sora and the Paper Boats", "author": "Hana Ito", "series": None, "seriesNo": None,
+     "minAge": 5, "maxAge": 8, "themes": ["ocean", "friendship"], "color": "#3E8FA8"},
 ]
 
 # Extra title facts: page count, release date, and a synthetic "loved by readers this age" rating
@@ -105,6 +112,8 @@ TITLE_EXTRA = {
     "t-snail": (32, "2024-05-07", 84, 98), "t-ferry": (340, "2026-08-25", 79, 233),
     "t-moonfox-3": (240, "2026-12-01", None, 0), "t-harbor": (190, "2026-10-28", 92, 26),
     "t-gnome-2": (80, "2026-10-21", 88, 31),
+    "t-bus44": (168, "2026-10-13", None, 0), "t-clockwork": (214, "2026-09-15", 86, 24),
+    "t-sora": (40, "2026-08-04", 89, 22),
 }
 for _t in TITLES:
     _p, _r, _pct, _n = TITLE_EXTRA[_t["id"]]
@@ -138,6 +147,7 @@ COPIES = [
     {"titleId": "t-moonfox-3", "libraryId": "lib-county", "owned": 0, "available": 0, "queue": 9, "asOf": FRESH, "ppuCents": None, "onOrder": 3},
     {"titleId": "t-harbor", "libraryId": "lib-county", "owned": 2, "available": 1, "queue": 0, "asOf": FRESH, "ppuCents": None},
     {"titleId": "t-gnome-2", "libraryId": "lib-city", "owned": 1, "available": 1, "queue": 0, "asOf": FRESH, "ppuCents": None},
+    {"titleId": "t-clockwork", "libraryId": "lib-county", "owned": 1, "available": 1, "queue": 0, "asOf": FRESH, "ppuCents": None},
 ]
 for _c in COPIES:
     _c.setdefault("onOrder", 0)
@@ -211,6 +221,45 @@ SHELVES = [
      "titleIds": ["t-orchard", "t-ferry"]},
 ]
 
+# Author profiles. "emerging" = first book in the last three years (record R15)
+AUTHORS = [
+    {"name": "Lena Okafor", "emerging": True, "debutTitleId": "t-comet-1", "debutYear": 2024, "hometown": "Maple County",
+     "followers": 412, "bio": "A former school art teacher. The Comet Kids, her first book, started as a comic she drew for her class."},
+    {"name": "Leo Park", "emerging": True, "debutTitleId": "t-bus44", "debutYear": 2026, "hometown": "Riverbend",
+     "followers": 38, "bio": "Drives the night bus in Riverbend and wrote his first book on the back route, one stop at a time."},
+    {"name": "Ada Mensah", "emerging": True, "debutTitleId": "t-clockwork", "debutYear": 2026, "hometown": "Harbor Point",
+     "followers": 57, "bio": "A clock repairer who writes mysteries where every gear is a clue."},
+    {"name": "Hana Ito", "emerging": True, "debutTitleId": "t-sora", "debutYear": 2026, "hometown": "Riverbend",
+     "followers": 21, "bio": "Folds paper boats with kids at Riverbend storytimes. Sora is her first picture book."},
+    {"name": "Sam Whitlow", "emerging": False, "debutTitleId": "t-owl", "debutYear": 2019, "hometown": None, "followers": 1830,
+     "bio": "Writes cozy adventures about small animals and big skies."},
+    {"name": "Rosa Lind", "emerging": False, "debutTitleId": "t-rainy", "debutYear": 2015, "hometown": "Maple County", "followers": 2210,
+     "bio": "Picture-book author and storytime regular."},
+    {"name": "June Adeyemi", "emerging": False, "debutTitleId": "t-garden", "debutYear": 2018, "hometown": None, "followers": 940,
+     "bio": "Writes about friendship, trains and gardens."},
+    {"name": "Ines Marlow", "emerging": False, "debutTitleId": "t-deepsea", "debutYear": 2017, "hometown": None, "followers": 1215,
+     "bio": "Marine biologist turned mystery writer."},
+    {"name": "Mara Vance", "emerging": False, "debutTitleId": "t-orchard", "debutYear": 2012, "hometown": None, "followers": 5120,
+     "bio": "Novelist for grown-ups."},
+    {"name": "Tomas Reyes", "emerging": False, "debutTitleId": "t-badger", "debutYear": 2016, "hometown": None, "followers": 610,
+     "bio": "Builds boats and writes about animals who build things."},
+    {"name": "Dana Pell", "emerging": False, "debutTitleId": "t-whiskers", "debutYear": 2014, "hometown": None, "followers": 300,
+     "bio": "Writes funny animal detective stories."},
+]
+
+# What other (synthetic) families at each library signal: "Ask my library" requests and loves (records R16, R18)
+COMMUNITY = [
+    {"titleId": "t-bus44", "libraryId": "lib-county", "requests": 37, "loves": 0},
+    {"titleId": "t-bus44", "libraryId": "lib-city", "requests": 12, "loves": 0},
+    {"titleId": "t-sora", "libraryId": "lib-city", "requests": 21, "loves": 0},
+    {"titleId": "t-sora", "libraryId": "lib-county", "requests": 9, "loves": 0},
+    {"titleId": "t-comet-1", "libraryId": "lib-county", "requests": 0, "loves": 118},
+    {"titleId": "t-kite", "libraryId": "lib-county", "requests": 0, "loves": 63},
+    {"titleId": "t-clockwork", "libraryId": "lib-county", "requests": 0, "loves": 41},
+    {"titleId": "t-harbor", "libraryId": "lib-county", "requests": 0, "loves": 26},
+    {"titleId": "t-gnome-2", "libraryId": "lib-city", "requests": 0, "loves": 19},
+]
+
 FOLLOWS = [
     {"memberId": "m-arjun", "kind": "series", "value": "Moon Fox"},
 ]
@@ -237,7 +286,27 @@ MEETUPS = [
      "series": None, "venue": "Maple County Library, Main Branch", "venueKind": "library", "address": "1 Library Plaza, Maple County",
      "startsAt": "2026-10-31T17:00:00Z", "endsAt": "2026-10-31T18:00:00Z", "minAge": 4, "maxAge": 10, "capacity": 30, "seatsTaken": 30,
      "priceCents": 0, "description": "Already happened; hidden from upcoming lists."},
+    # v0.4: author engagement, online and in person (record R17)
+    {"id": "meet-comet-live", "title": "Live from the launchpad: Lena Okafor on The Comet Kids", "kind": "author talk", "author": "Lena Okafor",
+     "series": "Comet Kids", "venue": "Readaroo Live (online)", "venueKind": "online", "address": "Join link opens 15 minutes before",
+     "startsAt": "2026-11-12T01:00:00Z", "endsAt": "2026-11-12T01:45:00Z", "minAge": 7, "maxAge": 12, "capacity": 300, "seatsTaken": 143,
+     "priceCents": 0, "format": "online", "questions": True, "questionCount": 58,
+     "description": "How a comic for her class became her first book. Lena reads chapter 1 and answers questions kids sent in ahead."},
+    {"id": "meet-debuts", "title": "First books: Ada Mensah and Leo Park in conversation", "kind": "panel", "author": "Leo Park",
+     "series": None, "venue": "Readaroo Live (online)", "venueKind": "online", "address": "Join link opens 15 minutes before",
+     "startsAt": "2026-11-19T01:00:00Z", "endsAt": "2026-11-19T01:45:00Z", "minAge": 8, "maxAge": 12, "capacity": 200, "seatsTaken": 31,
+     "priceCents": 0, "format": "online", "questions": True, "questionCount": 9,
+     "description": "Two first-time authors on where ideas come from and what happens after you finish a book."},
+    {"id": "meet-bus44", "title": "Launch party: Bus 44 to the Stars with Leo Park", "kind": "book launch", "author": "Leo Park",
+     "series": None, "venue": "Paper Lantern Books", "venueKind": "bookstore", "address": "214 Alder Street, Maple County",
+     "startsAt": "2026-11-22T19:00:00Z", "endsAt": "2026-11-22T20:00:00Z", "minAge": 6, "maxAge": 10, "capacity": 30, "seatsTaken": 12,
+     "priceCents": 0, "format": "in_person", "questions": True, "questionCount": 4,
+     "description": "Leo reads from his debut, kids design their own bus route to the stars, and every family gets a bookmark."},
 ]
+for _m in MEETUPS:
+    _m.setdefault("format", "in_person")
+    _m.setdefault("questions", _m["kind"] == "author talk")
+    _m.setdefault("questionCount", 12 if _m["kind"] == "author talk" else 0)
 
 REACTIONS = [
     {"id": "react-1", "borrowId": "borrow-1", "memberId": "m-arjun", "reaction": "loved", "at": "2026-10-30T19:31:00Z"},
@@ -274,6 +343,16 @@ DEMO_RECORDS = [
      "proves": "Arjun follows Moon Fox, so Ember Sky (out Dec 1, on order) shows up first with a pre-release hold. New arrivals from the last 30 days follow."},
     {"id": "R14", "view": "events", "memberId": "m-priya", "label": "Author talks and meetups",
      "proves": "Lena Okafor is at Paper Lantern Books (3 seats left). Kids under 13 go with a grown-up; the full storytime puts you on the waitlist."},
+    {"id": "R15", "view": "author", "author": "Lena Okafor", "memberId": "m-arjun", "label": "Author page: a new voice",
+     "proves": "Lena Okafor's first book was The Comet Kids (2024). Her page shows her books, her online and in-person events, and a follow button."},
+    {"id": "R16", "titleId": "t-bus44", "memberId": "m-arjun", "label": "Ask my library",
+     "proves": "Bus 44 to the Stars, a debut, isn't at your libraries yet. Asking adds your family to the demand the librarian sees; nothing is bought for you."},
+    {"id": "R17", "view": "events", "memberId": "m-arjun", "label": "Online author talk + questions",
+     "proves": "Lena Okafor's online talk takes questions ahead of time. A kid's question waits for a parent before it's sent."},
+    {"id": "R18", "view": "discover", "memberId": "m-arjun", "label": "New voices and community picks",
+     "proves": "Discover shows first-time authors that fit Arjun's age, and books loved by other families at your libraries, each with its reason."},
+    {"id": "R19", "view": "library", "memberId": "m-priya", "label": "Library sees reader demand",
+     "proves": "The librarian sees requests by title and age group. Ordering Bus 44 makes it borrowable and tells every family who asked."},
 ]
 
 
@@ -309,6 +388,7 @@ def main():
         "config": CONFIG, "libraries": LIBRARIES, "family": FAMILY, "members": MEMBERS, "cards": CARDS,
         "titles": TITLES, "copies": COPIES, "holds": HOLDS, "borrows": BORROWS, "reactions": REACTIONS,
         "sessions": SESSIONS, "tbr": TBR, "shelves": SHELVES, "follows": FOLLOWS, "meetups": MEETUPS,
+        "authors": AUTHORS, "community": COMMUNITY,
         "demoRecords": DEMO_RECORDS,
     }
     (ROOT / "data" / "seed.json").write_text(json.dumps(seed, indent=2) + "\n")
@@ -317,7 +397,7 @@ def main():
         "-- Generated by data/generate_data.py. Do not edit by hand.",
         "-- Every person, library and book here is fictional.",
         "BEGIN;",
-        "TRUNCATE events, meter_events, feedback, reactions, approvals, sessions, rsvps, meetups, follows, tbr, shelf_titles, shelves, borrows, holds, copies, titles, cards, members, families, libraries, app_config RESTART IDENTITY CASCADE;",
+        "TRUNCATE recommendations, event_questions, library_requests, community_signals, authors, events, meter_events, feedback, reactions, approvals, sessions, rsvps, meetups, follows, tbr, shelf_titles, shelves, borrows, holds, copies, titles, cards, members, families, libraries, app_config RESTART IDENTITY CASCADE;",
         insert("app_config", ["key", "value"], [{"key": k, "value": str(v)} for k, v in CONFIG.items()]),
         insert("libraries", ["id", "name", "dailyCapCents", "monthlyCapCents", "spentDay", "spentTodayCents", "spentMonthCents", "stripeCustomerId"], LIBRARIES),
         insert("families", ["id", "name"], [FAMILY]),
@@ -337,7 +417,9 @@ def main():
                [{"shelfId": s["id"], "titleId": t, "position": i} for s in SHELVES for i, t in enumerate(s["titleIds"])]),
         insert("follows", ["memberId", "kind", "value"], FOLLOWS),
         insert("meetups", ["id", "title", "kind", "author", "series", "venue", "venueKind", "address", "startsAt", "endsAt",
-                           "minAge", "maxAge", "capacity", "seatsTaken", "priceCents", "description"], MEETUPS),
+                           "minAge", "maxAge", "capacity", "seatsTaken", "priceCents", "description", "format", "questions", "questionCount"], MEETUPS),
+        insert("authors", ["name", "emerging", "debutTitleId", "debutYear", "hometown", "followers", "bio"], AUTHORS),
+        insert("community_signals", ["titleId", "libraryId", "requests", "loves"], COMMUNITY),
         "COMMIT;",
     ]
     (ROOT / "db" / "002_seed.sql").write_text("\n\n".join(parts) + "\n")

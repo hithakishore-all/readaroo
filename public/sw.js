@@ -1,7 +1,7 @@
 // Readaroo service worker: makes the app installable and lets it open with no connection.
 // App files: network first (you always get the latest), falling back to the saved copy offline.
 // Fonts and icons: saved copy first. API calls: always the network; offline gets a clear error.
-const VERSION = 'readaroo-0.3.0';
+const VERSION = 'readaroo-0.4.0';
 const APP_SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'api-http.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 

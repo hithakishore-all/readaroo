@@ -53,6 +53,21 @@ test('live mode against Postgres', { skip: !appUrl && 'set TEST_DATABASE_URL to 
       assert.equal(b.body.outcome, 'going');
       assert.equal((await j('POST', '/api/meetups/meet-okafor/cancel', { actor: 'm-priya' })).body.outcome, 'cancelled');
     });
+    await t.test('v0.4 author features work on Postgres', async () => {
+      const au = await j('GET', `/api/authors/${encodeURIComponent('Lena Okafor')}?actor=m-arjun`);
+      assert.deepEqual(au.body.events.map((e) => e.format), ['online', 'in_person']);
+      const ask = await j('POST', '/api/library-requests', { actor: 'm-arjun', titleId: 't-bus44' });
+      assert.equal(ask.body.outcome, 'asked');
+      assert.equal((await j('POST', '/api/library-requests', { actor: 'm-arjun', titleId: 't-bus44' })).body.outcome, 'already_asked');
+      const o = await j('POST', '/api/library/order', { libraryId: 'lib-county', titleId: 't-bus44', copies: 2 });
+      assert.equal(o.body.notified, 38);
+      assert.equal((await j('POST', '/api/borrow', { actor: 'm-arjun', titleId: 't-bus44' })).body.outcome, 'borrowed');
+      const qn = await j('POST', '/api/meetups/meet-comet-live/questions', { actor: 'm-arjun', text: 'How did you draw the comet?' });
+      assert.equal(qn.body.outcome, 'waiting_parent');
+      assert.equal((await j('POST', `/api/questions/${qn.body.questionId}`, { actor: 'm-priya', decision: 'approve' })).body.outcome, 'sent');
+      assert.equal((await j('POST', '/api/recommendations', { actor: 'm-arjun', titleId: 't-moonfox-1', to: 'm-maya', note: 'Brave fox' })).body.outcome, 'recommended');
+      assert.equal((await j('GET', '/api/discover?actor=m-maya')).body.fromFamily[0].from, 'Arjun');
+    });
     await t.test('parallel bookings never overfill a room', async () => {
       const results = await Promise.all(Array.from({ length: 10 }, () => s.deps.store.takeSeats('meet-okafor', 2)));
       const m = await s.deps.store.getMeetup('meet-okafor');

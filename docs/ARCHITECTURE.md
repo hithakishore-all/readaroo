@@ -36,8 +36,13 @@ The single-file demo replaces `api-http.js` with an adapter that calls `engine.h
 | `tbr` | `member_id`, `title_id`, `added_by`, `source` | Want-to-read lists |
 | `shelves`, `shelf_titles` | `min_age`, `max_age`, `curator`, `position` | Librarian starter shelves by age group |
 | `follows` | `kind` (`author`/`series`), `value` | Drives Coming soon and picks |
-| `meetups` | `starts_at`, `min_age`, `max_age`, `capacity`, `seats_taken` | CHECK keeps seats at or under capacity |
+| `meetups` | `starts_at`, `min_age`, `max_age`, `capacity`, `seats_taken`, `format` (`in_person`/`online`), `questions`, `question_count` | CHECK keeps seats at or under capacity |
 | `rsvps` | `attendees` (member ids), `status` (`going`/`waitlist`/`requested`/`cancelled`) | One active booking per family per event |
+| `authors` | `name` (PK), `emerging`, `debut_title_id`, `debut_year`, `hometown`, `followers`, `bio` | `emerging` = first book in the last three years |
+| `community_signals` | `title_id`, `library_id`, `requests`, `loves` | Synthetic totals from other families. No individual data |
+| `library_requests` | `member_id`, `title_id` (unique together), `library_id`, `status` (`requested`/`ordered`) | Ask my library. Librarians only ever see totals |
+| `event_questions` | `meetup_id`, `member_id`, `text` (3–200), `status` (`waiting_parent`/`sent`/`declined`) | Kids' questions wait for a parent |
+| `recommendations` | `from_member`, `to_member`, `title_id` (unique together), `note` (≤140) | In-family only; CHECK stops recommending to yourself |
 | `events` | `seq`, `type`, `actor`, `data` | Append-only audit log |
 
 ## Identifiers
@@ -130,6 +135,10 @@ stateDiagram-v2
 | `list.added` / `list.removed` | Want-to-read list change | `titleId`, `memberId` |
 | `follow.added` / `follow.removed` | Follow change | `kind`, `value` |
 | `meetup.requested` / `meetup.rsvp` / `meetup.declined` / `meetup.cancelled` | Event requests and bookings | `meetupId`, `status`, `attendees`, `released` |
+| `library.requested` | Ask my library | `titleId`, `memberId`, `libraryId` |
+| `library.ordered` / `library.request_fulfilled` | Librarian added copies; each family who asked is logged | `titleId`, `libraryId`, `copies`, `families` |
+| `question.requested` / `question.sent` / `question.approved` / `question.declined` | Questions for authors | `meetupId`, `questionId` |
+| `recommendation.sent` | In-family recommendation | `titleId`, `to` |
 
 ## Security model
 

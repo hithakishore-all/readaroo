@@ -1,8 +1,4 @@
-> **▶ Live demo:** https://hithakishore-all.github.io/readaroo/ (runs in your browser, synthetic data)
-
 # Readaroo
-
-![Readaroo demo](docs/readaroo-demo.gif)
 
 **Never wait for the next book, and never read alone.**
 
@@ -16,6 +12,18 @@ Version 0.2 adds the everyday reading life around the library:
 - **Streaks with a rest day:** five minutes a day counts, and one missed day a week doesn't break it.
 - **New releases:** follow a series or author; sequels show up first, and you can get in line before release day.
 - **Author talks and meetups:** readings, signings, storytimes and book clubs at libraries and bookstores, matched to what your family reads. Kids ask; a grown-up books.
+
+Version 0.4 helps new authors find readers, and helps libraries see what their community wants:
+
+- **Author discovery:** a **New voices** shelf in Discover with one book each from first-time and emerging authors, beyond the bestseller lists, and an author page with a bio, books, events and a follow button.
+- **Author engagement:** online and in-person author events. Families send questions ahead of time; a kid's question waits for a parent before it goes to the author.
+- **Reader interest signals:** **Ask my library** on books your libraries don't own yet. Librarians see the totals by book (never names), add copies, and every family who asked is told.
+- **Community-driven discovery:** **Loved by families near you** (totals only), and recommend a book you read to someone in your family with a short note, or copy a share line for a friend.
+
+<p>
+  <img src="docs/screenshots/15-new-voices.png" alt="Discover: New voices from first-time authors, with Ask my library for books not owned yet" width="400">
+  <img src="docs/screenshots/19-reader-demand.png" alt="The library side: requests as totals by book, with Add 3 copies" width="400">
+</p>
 
 ![Readaroo: a held book with three Next-Up read-alikes](docs/screenshots/02-next-up.png)
 
@@ -125,13 +133,14 @@ Pick who you are with **Acting as** in the top right. Parents see Home, Discover
 | Home (parent) | Everyone's streak, reading progress, holds, list books ready to borrow, the next event for your family, requests to review |
 | My books (kid) | Streak card with the last 14 days, Continue reading, react to a finished book (Loved it / It was OK / Not for me) |
 | Reader | Page and time tracking: + 1 page, + 10 pages, Done for now, I finished the book. Leaving mid-chapter still saves |
-| Discover | Search, Good picks with reasons, Coming soon (Get in line now, Follow series) and New arrivals (Follow the author, Add to list) |
+| Discover | Search, New voices (debut and emerging authors, Ask my library for books not owned yet), From your family, Good picks with reasons, Loved by families near you, Coming soon and New arrivals |
 | Lists | Each person's want-to-read list (ready books first) and librarian shelves by age group |
-| Events | Author talks, signings, storytimes and book clubs. Parents tick who's going and Book free seats or Join the waitlist; kids tap Ask to go |
-| Book page | Borrow now, Place hold (shortest line), Borrow instantly, Refresh availability, and Next-Up suggestions with Borrow / Good pick / Not for us |
-| Approvals | Approve this book, Approve the series, or Not now; event requests: Book it or Not this time |
+| Events | Author talks (online and in person), signings, storytimes and book clubs. Parents tick who's going and Book free seats or Join the waitlist; kids tap Ask to go. Ask the author a question ahead of time |
+| Author page | Bio, first-book year, hometown, every book with its status, upcoming online and in-person events, Follow |
+| Book page | Borrow now, Place hold (shortest line), Borrow instantly, Refresh availability, Next-Up suggestions with Borrow / Good pick / Not for us, Ask my library, Recommend or share |
+| Approvals | Approve this book, Approve the series, or Not now; event requests: Book it or Not this time; kids' questions for authors: Send it or Don't send |
 | Digest | Books finished, reading time, days read, streaks, kid reactions and a conversation starter per book |
-| Payments | How the money moves, every Stripe usage charge with an invoice preview per library, and each library's daily and monthly budget |
+| Payments and reader demand | How the money moves, every Stripe usage charge with an invoice preview per library, what readers asked each library for (Add 3 copies), and each library's daily and monthly budget |
 | Demo guide | Open any demo record, see the audit log, or Reset demo data (offline only) |
 
 <p>
@@ -163,6 +172,11 @@ Each record proves one behavior. In the app, open them from the **Demo guide**.
 | R12 | Arjun's picks | **Good picks.** The next Moon Fox book first ("Next in Moon Fox after The Moon Fox"), then more by Lena Okafor and highly rated books for ages 8–10 |
 | R13 | *The Moon Fox: Ember Sky* | **New releases.** Arjun follows Moon Fox, so the Dec 1 sequel is first in Coming soon, with a hold counted from release day |
 | R14 | *Lena Okafor: drawing the Moon Fox* | **Author talks and meetups.** Matched because Arjun loved the book. Booking Arjun adds Priya (under-13s go with a grown-up). The full storytime puts you on the waitlist |
+| R15 | Lena Okafor's author page | **A new voice.** Her first book, *The Comet Kids* (2024), comes first; an online talk and a bookstore talk; Follow adds her to Discover |
+| R16 | *Bus 44 to the Stars* by Leo Park | **Ask my library.** A debut no family library owns. 49 families already asked; Arjun's ask makes 50. A second ask is refused politely; owned books can't be requested |
+| R17 | *Live from the launchpad* (online) | **Questions for authors.** Arjun's question waits in Approvals; Priya sends it and the count goes up. Three questions per person per event |
+| R18 | Arjun's Discover | **New voices and community picks.** One book per new author with reasons ("First book by Leo Park (2026)", "Local author from Maple County"), and books loved by families at your libraries |
+| R19 | Payments and reader demand | **The library side.** Requests as totals by book, no names. Add 3 copies of *Bus 44*: it's borrowable at once and every family who asked sees "Your request worked" |
 
 ![Payments: how the money moves, Stripe usage charges and an invoice preview](docs/screenshots/05-payments.png)
 
@@ -265,17 +279,23 @@ Every request names the acting family member as `actor` (query string for GET, J
 | GET | `/api/lists` | `actor`, `member` | Want-to-read list and shelves by age group |
 | POST | `/api/tbr` | `actor`, `member`, `titleId` | Adds to a list |
 | POST | `/api/tbr/remove` | `actor`, `member`, `titleId` | Removes from a list |
-| GET | `/api/discover` | `actor`, `member` | Good picks with reasons, new arrivals, coming soon, follows |
+| GET | `/api/discover` | `actor`, `member` | New voices, from your family, good picks with reasons, community picks, new arrivals, coming soon, follows |
 | POST | `/api/follow` | `actor`, `member`, `kind` (`author`, `series`), `value`, `on` | Follow or unfollow |
 | GET | `/api/meetups` | `actor` | Upcoming events, matched to the family |
 | POST | `/api/meetups/:id/rsvp` | `actor`, `attendees` (member ids) | Parent: `going` or `waitlist`. Kid: `requested` |
 | POST | `/api/meetups/:id/cancel` | `actor` (parent) | Cancels and frees the seats |
 | POST | `/api/rsvps/:id` | `actor` (parent), `decision` (`approve`, `decline`) | Answers a kid's event request |
 | GET | `/api/meetups/:id/ics` | | Calendar invite (`text/calendar`) |
+| GET | `/api/authors/:name` | `actor`, `member` | Author profile, books, upcoming events, follow state |
+| POST | `/api/library-requests` | `actor`, `member`, `titleId` | Ask my library: `asked` or `already_asked`; 409 `owned` if a family library has it |
+| POST | `/api/library/order` | `libraryId`, `titleId`, `copies` (1–20) | Library side: adds digital copies and marks every request for it fulfilled |
+| POST | `/api/meetups/:id/questions` | `actor`, `text` (3–200) | Parent: `sent`. Kid: `waiting_parent`. Max 3 per person per event |
+| POST | `/api/questions/:id` | `actor` (parent), `decision` (`approve`, `decline`) | Sends or drops a kid's question |
+| POST | `/api/recommendations` | `actor`, `titleId`, `to`, `note` (≤140) | Recommend a book you've read to someone in your family |
 | GET | `/api/digest` | `actor` (parent) | Weekly totals, streaks and per-member books |
-| GET | `/api/library` | | Budgets, spend, metered charges, refusals |
+| GET | `/api/library` | | Budgets, spend, metered charges, refusals, reader demand per library (totals only) |
 | GET | `/api/events` | `actor` | Latest 50 audit events |
-| GET | `/api/demo-records` | | The 8 demo records |
+| GET | `/api/demo-records` | | The 19 demo records |
 | POST | `/api/reset` | | Restores demo data (offline only; 403 in live mode) |
 
 ## Testing
@@ -284,7 +304,7 @@ Every request names the acting family member as `actor` (query string for GET, J
 npm test
 ```
 
-This starts the real server offline on a free port and walks every demo record (R1–R14) through the API, including failure paths: bad input, a kid trying to approve, stale data, the spend cap, a failed Stripe call, live-key refusal, repeated reading saves, the streak's rest day, age checks on events, and a full room.
+This starts the real server offline on a free port and walks every demo record (R1–R19) through the API, including failure paths: bad input, a kid trying to approve, stale data, the spend cap, a failed Stripe call, live-key refusal, repeated reading saves, the streak's rest day, age checks on events, a full room, duplicate library requests, a kid approving their own question, and recommending a book you haven't read.
 
 To also test live mode against a throwaway Postgres (it reloads the demo data):
 

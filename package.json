@@ -1,6 +1,6 @@
 {
   "name": "readaroo",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Readaroo: a family library app prototype. Never wait for the next book, and never read alone. All data is synthetic.",
   "license": "MIT",

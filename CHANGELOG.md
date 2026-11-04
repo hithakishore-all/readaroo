@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0 — 2026-11-04
+
+- Author discovery: New voices shelf in Discover (one book per debut or emerging author, with reasons) and author pages with bio, books, events and Follow
+- Author engagement: online and in-person events, questions for authors sent ahead of time; kids' questions wait for a parent; 3 per person per event
+- Reader interest signals: Ask my library for books no family library owns; librarians see totals by book (no names), add copies, and every family who asked is told
+- Community-driven discovery: Loved by families near you (totals only), in-family recommendations with a note, and a share line to copy
+- Three new debut authors and titles, two online author events and a bookstore launch party (all synthetic)
+- Demo records R15–R19; tests for all of them, on the memory store and on Postgres
+- New tables: authors, community_signals, library_requests, event_questions, recommendations
+
 ## 0.3.0 — 2026-11-03
 
 - New light, kid-friendly look: sky-wash background, grape and sunshine colors, chunky buttons, bigger kid mode

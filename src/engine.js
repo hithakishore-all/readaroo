@@ -244,6 +244,12 @@
         hold: holdInfo,
         instant,
         nextUp: next,
+        author: await authorBrief(t.author),
+        request: await requestInfo(t, member, fam, av, c),
+        recommendedBy: (await store.listRecommendations()).filter((r) => r.toMember === member.id && r.titleId === t.id)
+          .map((r) => ({ from: nameIn(fam, r.fromMember), note: r.note })),
+        canRecommend: (await store.listBorrows()).some((b) => b.memberId === actor.id && b.titleId === t.id),
+        shareText: `${t.title} by ${t.author}${levelKnown(t) ? ` (${levelLabel(t)})` : ''}. Found through our library on Readaroo.`,
       };
     }
 
@@ -294,6 +300,12 @@
         meetupRequests: await meetupRequests(fam),
         nextMeetup: await nextMeetupFor(fam, c),
         holds: holdRows,
+        questionRequests: await questionRequests(fam),
+        requestNews: await requestNews(fam, tById, libraries),
+        recommendations: (await store.listRecommendations()).filter((r) => r.familyId === fam.id).map((r) => ({
+          id: r.id, from: nameIn(fam, r.fromMember), toMemberId: r.toMember, to: nameIn(fam, r.toMember), titleId: r.titleId,
+          title: tById[r.titleId].title, color: tById[r.titleId].color, note: r.note,
+        })),
         pendingApprovals: approvals.filter((a) => a.status === 'pending').map((a) => ({
           id: a.id, memberId: a.memberId, titleId: a.titleId, title: tById[a.titleId].title, reason: a.reason, requestedAt: a.requestedAt,
         })),
@@ -606,6 +618,11 @@
     async function library() {
       const c = await cfg();
       const libs = await store.listLibraries();
+      const titles = await store.listTitles();
+      const community = await store.listCommunity();
+      const requests = await store.listLibraryRequests();
+      const emerging = await emergingAuthors();
+      const copies = await store.listCopies();
       const meters = await store.listMeterEvents();
       const events = await store.listEvents();
       return {
@@ -617,9 +634,27 @@
             spentMonthCents: l.spentMonthCents, stripeConnected: Boolean(l.stripeCustomerId),
             meterEvents: meters.filter((m) => m.libraryId === l.id),
             refusals: events.filter((e) => e.type === 'instant.refused' && e.data.libraryId === l.id).length,
+            demand: demandFor(l.id, titles, community, requests, emerging, copies),
           };
         }),
       };
+    }
+    // What readers asked this library to buy: synthetic community counts + live requests. Totals only, no names.
+    function demandFor(libraryId, titles, community, requests, emerging, copies) {
+      const out = [];
+      for (const t of titles) {
+        const owned = copies.some((cp) => cp.titleId === t.id && cp.libraryId === libraryId && cp.owned > 0);
+        const comm = community.find((x) => x.titleId === t.id && x.libraryId === libraryId);
+        const live = requests.filter((r) => r.titleId === t.id && r.libraryId === libraryId && r.status === 'requested').length;
+        const ordered = requests.filter((r) => r.titleId === t.id && r.libraryId === libraryId && r.status === 'ordered').length;
+        const total = (comm ? comm.requests : 0) + live;
+        if (!total && !ordered) continue;
+        out.push({
+          titleId: t.id, title: t.title, author: t.author, color: t.color, newAuthor: emerging.has(t.author),
+          ages: levelLabel(t), requests: total, status: owned ? 'ordered' : 'requested', ordered,
+        });
+      }
+      return out.sort((a, b) => (a.status === 'requested' ? -1 : 1) - (b.status === 'requested' ? -1 : 1) || b.requests - a.requests);
     }
 
     async function eventsView(q) {
@@ -757,8 +792,12 @@
     }
 
     // ---------- shared title row ----------
+    async function emergingAuthors() {
+      return new Map((await store.listAuthors()).filter((a) => a.emerging).map((a) => [a.name, a]));
+    }
     async function titleRow(t, member, fam, c, extra) {
       const av = await availability(t, fam, c);
+      const em = (await emergingAuthors()).get(t.author);
       const status = av.some((a) => a.status === 'available') ? 'available'
         : av.some((a) => a.status === 'coming') ? 'coming'
           : av.some((a) => a.status === 'check') ? 'check' : av.length ? 'waitlist' : 'none';
@@ -767,6 +806,7 @@
         releaseDate: t.releaseDate, status, statusLabel: status === 'coming' ? `Out ${prettyDate(t.releaseDate)}` : null,
         inBand: inBand(member, t), needsOk: member.role === 'kid' && !inBand(member, t),
         rating: t.ratingPct && t.ratingCount >= 20 ? { pct: t.ratingPct, count: t.ratingCount } : null,
+        newAuthor: Boolean(em), isDebut: Boolean(em && em.debutTitleId === t.id),
         ...(extra || {}),
       };
     }
@@ -907,9 +947,45 @@
         comingSoon.push(await titleRow(t, member, fam, c, { followed: isFollowed(t), onHold: holds.has(t.id) }));
       }
       comingSoon.sort((a, b) => Number(b.followed) - Number(a.followed) || a.releaseDate.localeCompare(b.releaseDate));
+      // v0.4: first-time authors, books loved by other families nearby, and family recommendations
+      const read = await borrowedTitleIds(member.id);
+      const emerging = await emergingAuthors();
+      const reactions = await store.listReactions();
+      const lovedIds = new Set(reactions.filter((r) => r.reaction === 'loved').map((r) => r.borrowId));
+      const lovedThemes = new Set((await store.listBorrows()).filter((b) => b.memberId === member.id && lovedIds.has(b.id))
+        .flatMap((b) => (titles.find((t) => t.id === b.titleId) || {}).themes || []));
+      const localNames = (await store.listLibraries()).filter((l) => libs.includes(l.id)).map((l) => l.name);
+      const newVoices = [];
+      for (const t of titles.filter((x) => emerging.has(x.author) && x.releaseDate <= c.today && !read.has(x.id) && fits(x) && levelKnown(x))) {
+        const a = emerging.get(t.author);
+        const why = [a.debutTitleId === t.id ? `First book by ${t.author} (${a.debutYear})` : `${t.author}'s first book came out in ${a.debutYear}`];
+        const shared = (t.themes || []).filter((x) => lovedThemes.has(x));
+        if (shared.length) why.push(`You loved books about ${shared.join(', ')}`);
+        if (a.hometown && localNames.some((n) => n.startsWith(a.hometown))) why.push(`Local author from ${a.hometown}`);
+        newVoices.push(await titleRow(t, member, fam, c, { why, score: shared.length * 2 + (atLibs(t) ? 1 : 0), requestable: !atLibs(t) }));
+      }
+      // One book per new author: their debut first, then the best match
+      newVoices.sort((x, y) => Number(y.isDebut) - Number(x.isDebut) || y.score - x.score || x.title.localeCompare(y.title));
+      const seenAuthors = new Set();
+      const perAuthor = newVoices.filter((x) => (seenAuthors.has(x.author) ? false : seenAuthors.add(x.author)));
+      perAuthor.sort((x, y) => y.score - x.score || x.title.localeCompare(y.title));
+      const community = await store.listCommunity();
+      const loves = {};
+      for (const x of community.filter((y) => libs.includes(y.libraryId))) loves[x.titleId] = (loves[x.titleId] || 0) + x.loves;
+      const communityPicks = [];
+      for (const t of titles.filter((x) => loves[x.id] > 0 && !read.has(x.id) && fits(x) && atLibs(x))) {
+        communityPicks.push(await titleRow(t, member, fam, c, { loves: loves[t.id], why: [`Loved by ${loves[t.id]} families at your libraries`] }));
+      }
+      communityPicks.sort((x, y) => Number(y.newAuthor) - Number(x.newAuthor) || y.loves - x.loves);
+      const fromFamily = [];
+      for (const r of (await store.listRecommendations()).filter((x) => x.toMember === member.id)) {
+        const t = titles.find((x) => x.id === r.titleId);
+        fromFamily.push(await titleRow(t, member, fam, c, { from: nameIn(fam, r.fromMember), note: r.note }));
+      }
       return {
         member: { id: member.id, name: member.name, role: member.role, band: BAND_LABEL(member) },
         picks: await recommend(member, fam, c), newArrivals, comingSoon, follows,
+        newVoices: perAuthor.slice(0, 6), communityPicks: communityPicks.slice(0, 5), fromFamily,
       };
     }
     async function follow(body) {
@@ -971,6 +1047,10 @@
         rsvp: mine ? { id: mine.id, status: mine.status, attendees: mine.attendees.map((id) => nameIn(fam, id)) } : null,
         requests: requests.map((r) => ({ id: r.id, by: nameIn(fam, r.requestedBy) })),
         viewerRequested: requests.some((r) => r.requestedBy === viewer.id),
+        format: meet.format || 'in_person', takesQuestions: Boolean(meet.questions), questionCount: meet.questionCount || 0,
+        newAuthor: Boolean(meet.author && (await emergingAuthors()).has(meet.author)),
+        myQuestions: (await store.listQuestions()).filter((x) => x.meetupId === meet.id && x.familyId === fam.id)
+          .map((x) => ({ id: x.id, by: nameIn(fam, x.memberId), text: x.text, status: x.status })),
       };
     }
     async function meetups(q) {
@@ -1090,6 +1170,166 @@
       return { __raw: text, contentType: 'text/calendar; charset=utf-8', filename: `${m.id}.ics` };
     }
 
+    // ---------- v0.4: authors ----------
+    async function authorBrief(name) {
+      const a = await store.getAuthor(name);
+      if (!a) return { name, emerging: false };
+      return { name: a.name, emerging: Boolean(a.emerging), debutYear: a.debutYear, hometown: a.hometown };
+    }
+    async function authorView(name, q) {
+      const { actor, fam } = await loadFamilyFor(q.actor);
+      const member = memberIn(fam, q.member || q.actor);
+      if (actor.role === 'kid' && member.id !== actor.id) throw new HttpError(403, 'Kids can only see their own view.');
+      const a = await store.getAuthor(name);
+      if (!a) throw new HttpError(404, `No author called "${name}".`);
+      const c = await cfg();
+      const books = [];
+      for (const t of (await store.listTitles()).filter((x) => x.author === a.name && kidMayList(member, x))) books.push(await titleRow(t, member, fam, c));
+      books.sort((x, y) => x.releaseDate.localeCompare(y.releaseDate));
+      const links = await familyReadingLinks(fam);
+      const events = [];
+      for (const m of (await store.listMeetups()).filter((x) => x.author === a.name && Date.parse(x.startsAt) > c.nowMs && (actor.role !== 'kid' || ageFits(actor, x)))) {
+        events.push(await meetupRow(m, fam, links, c, actor));
+      }
+      events.sort((x, y) => x.startsAt.localeCompare(y.startsAt));
+      const follows = await store.listFollows();
+      const famFollowers = follows.filter((f) => f.kind === 'author' && f.value === a.name && fam.members.some((m) => m.id === f.memberId)).length;
+      return {
+        author: { name: a.name, bio: a.bio, hometown: a.hometown, emerging: Boolean(a.emerging), debutYear: a.debutYear, debutTitleId: a.debutTitleId,
+          followers: a.followers + famFollowers },
+        member: { id: member.id, name: member.name },
+        following: follows.some((f) => f.memberId === member.id && f.kind === 'author' && f.value === a.name),
+        books, events,
+      };
+    }
+
+    // ---------- v0.4: reader interest signals ("Ask my library") ----------
+    async function requestInfo(t, member, fam, av, c) {
+      if (av.length) return null; // already at one of the family's libraries
+      const libs = familyLibraryIds(fam);
+      const community = (await store.listCommunity()).filter((x) => x.titleId === t.id && libs.includes(x.libraryId));
+      const reqs = (await store.listLibraryRequests()).filter((r) => r.titleId === t.id && libs.includes(r.libraryId));
+      const mine = reqs.find((r) => r.memberId === member.id);
+      const families = new Set(reqs.filter((r) => r.status === 'requested').map((r) => r.familyId)).size;
+      return {
+        canAsk: !mine, asked: Boolean(mine), askedBy: reqs.filter((r) => r.familyId === fam.id).map((r) => nameIn(fam, r.memberId)),
+        demand: community.reduce((n, x) => n + x.requests, 0) + families,
+        libraryName: (await targetLibrary(t, fam)).name,
+      };
+    }
+    async function targetLibrary(t, fam) {
+      // Ask the family library where other readers have asked most; otherwise the first card
+      const libs = familyLibraryIds(fam);
+      const community = (await store.listCommunity()).filter((x) => x.titleId === t.id && libs.includes(x.libraryId));
+      community.sort((a, b) => b.requests - a.requests);
+      const id = community.length && community[0].requests > 0 ? community[0].libraryId : libs[0];
+      return store.getLibrary(id);
+    }
+    async function askLibrary(body) {
+      const { actor, fam } = await loadFamilyFor(body.actor);
+      const member = memberIn(fam, body.member || body.actor);
+      assertCanActFor(actor, member);
+      const t = await title(body.titleId);
+      const c = await cfg();
+      const av = await availability(t, fam, c);
+      if (av.length) throw new HttpError(409, `${t.title} is already at your libraries. Borrow it or place a hold.`, { code: 'owned' });
+      const lib = await targetLibrary(t, fam);
+      const added = await store.addLibraryRequest({ id: newId('req'), familyId: fam.id, memberId: member.id, titleId: t.id, libraryId: lib.id, status: 'requested', createdAt: c.now });
+      const info = await requestInfo(t, member, fam, av, c);
+      if (!added) return { outcome: 'already_asked', demand: info.demand, message: `${member.name} already asked ${lib.name} for ${t.title}.` };
+      await log(fam.id, actor.id, 'library.requested', { titleId: t.id, memberId: member.id, libraryId: lib.id });
+      return {
+        outcome: 'asked', libraryId: lib.id, demand: info.demand,
+        message: `Asked ${lib.name} for ${t.title}. ${info.demand} famil${info.demand === 1 ? 'y' : 'ies'} at your libraries asked for it. We'll tell you when it's in.`,
+      };
+    }
+    async function orderCopies(body) {
+      // Library side of the demo: a librarian acts on the demand list. No family data is shown, only totals.
+      const c = await cfg();
+      const lib = await store.getLibrary(body.libraryId);
+      if (!lib) throw new HttpError(404, `No library "${body.libraryId}".`);
+      const t = await title(body.titleId);
+      const n = body.copies === undefined ? 1 : Number(body.copies);
+      if (!Number.isInteger(n) || n < 1 || n > 20) throw new HttpError(400, '"copies" must be a whole number from 1 to 20.');
+      const before = (await store.listLibraryRequests()).filter((r) => r.titleId === t.id && r.libraryId === lib.id && r.status === 'requested');
+      const comm = (await store.listCommunity()).find((x) => x.titleId === t.id && x.libraryId === lib.id);
+      const asked = (comm ? comm.requests : 0) + new Set(before.map((r) => r.familyId)).size;
+      if (!asked) throw new HttpError(409, `No readers have asked ${lib.name} for ${t.title}.`, { code: 'no_demand' });
+      await store.addCopies(t.id, lib.id, n, c.now);
+      await store.markRequestsOrdered(t.id, lib.id, c.now);
+      await log(null, `librarian:${lib.id}`, 'library.ordered', { titleId: t.id, libraryId: lib.id, copies: n, families: asked });
+      for (const famId of new Set(before.map((r) => r.familyId))) await log(famId, `librarian:${lib.id}`, 'library.request_fulfilled', { titleId: t.id, libraryId: lib.id });
+      return {
+        outcome: 'ordered', copies: n, notified: asked,
+        message: `${lib.name} added ${n} digital cop${n === 1 ? 'y' : 'ies'} of ${t.title}. ${asked} famil${asked === 1 ? 'y who asked was' : 'ies who asked were'} told it's ready.`,
+      };
+    }
+    async function requestNews(fam, tById, libraries) {
+      return (await store.listLibraryRequests()).filter((r) => r.familyId === fam.id && r.status === 'ordered').map((r) => ({
+        titleId: r.titleId, title: tById[r.titleId].title, memberId: r.memberId, name: nameIn(fam, r.memberId),
+        libraryName: (libraries.find((l) => l.id === r.libraryId) || {}).name,
+      }));
+    }
+
+    // ---------- v0.4: questions for authors ----------
+    async function askQuestion(id, body) {
+      const { actor, fam } = await loadFamilyFor(body.actor);
+      const c = await cfg();
+      const meet = await upcomingMeetup(id, c);
+      if (!meet.questions) throw new HttpError(409, 'This event isn\'t taking questions.', { code: 'no_questions' });
+      const text = typeof body.text === 'string' ? body.text.trim() : '';
+      if (text.length < 3 || text.length > 200) throw new HttpError(400, 'A question needs 3 to 200 characters.');
+      if (actor.role === 'kid' && !ageFits(actor, meet)) throw new HttpError(409, `This event is for ages ${meet.minAge}\u2013${meet.maxAge}.`, { code: 'age' });
+      const mine = (await store.listQuestions()).filter((x) => x.meetupId === meet.id && x.memberId === actor.id && x.status !== 'declined');
+      if (mine.length >= 3) throw new HttpError(409, 'Three questions per event, so everyone gets a turn.', { code: 'limit' });
+      const status = actor.role === 'kid' ? 'waiting_parent' : 'sent';
+      const qid = newId('q');
+      await store.addQuestion({ id: qid, meetupId: meet.id, familyId: fam.id, memberId: actor.id, text, status, createdAt: c.now });
+      if (status === 'sent') await store.bumpQuestionCount(meet.id);
+      await log(fam.id, actor.id, status === 'sent' ? 'question.sent' : 'question.requested', { meetupId: meet.id, questionId: qid });
+      return {
+        outcome: status, questionId: qid,
+        message: status === 'sent' ? `Sent to ${meet.author || 'the host'}. Questions are picked live during the event.`
+          : 'A grown-up will check your question, then it goes to the author.',
+      };
+    }
+    async function decideQuestion(id, body) {
+      const { actor, fam } = await loadFamilyFor(body.actor);
+      if (actor.role !== 'parent') throw new HttpError(403, 'Only a parent can approve a question.');
+      if (!['approve', 'decline'].includes(body.decision)) throw new HttpError(400, '"decision" must be approve or decline.');
+      const x = (await store.listQuestions()).find((y) => y.id === id && y.familyId === fam.id);
+      if (!x) throw new HttpError(404, `No question "${id}".`);
+      if (x.status !== 'waiting_parent') throw new HttpError(409, 'That question was already answered.', { code: 'already_decided' });
+      const status = body.decision === 'approve' ? 'sent' : 'declined';
+      await store.updateQuestion(id, { status, decidedBy: actor.id });
+      if (status === 'sent') await store.bumpQuestionCount(x.meetupId);
+      await log(fam.id, actor.id, `question.${status === 'sent' ? 'approved' : 'declined'}`, { questionId: id });
+      return { outcome: status, message: status === 'sent' ? 'Question sent to the author.' : 'Question not sent.' };
+    }
+    async function questionRequests(fam) {
+      const meets = Object.fromEntries((await store.listMeetups()).map((m) => [m.id, m]));
+      return (await store.listQuestions()).filter((x) => x.familyId === fam.id && x.status === 'waiting_parent')
+        .map((x) => ({ id: x.id, by: nameIn(fam, x.memberId), text: x.text, meetupTitle: meets[x.meetupId].title, author: meets[x.meetupId].author }));
+    }
+
+    // ---------- v0.4: family recommendations ----------
+    async function recommendToFamily(body) {
+      const { actor, fam } = await loadFamilyFor(body.actor);
+      const t = await title(body.titleId);
+      const to = memberIn(fam, body.to);
+      if (to.id === actor.id) throw new HttpError(400, 'Pick someone else in the family.');
+      if (!(await store.listBorrows()).some((b) => b.memberId === actor.id && b.titleId === t.id)) {
+        throw new HttpError(409, `Read ${t.title} first, then you can recommend it.`, { code: 'not_read' });
+      }
+      const note = typeof body.note === 'string' && body.note.trim() ? body.note.trim() : null;
+      if (note && note.length > 140) throw new HttpError(400, 'Keep the note to 140 characters.');
+      const c = await cfg();
+      const added = await store.addRecommendation({ id: newId('rec'), familyId: fam.id, fromMember: actor.id, toMember: to.id, titleId: t.id, note, createdAt: c.now });
+      if (!added) return { outcome: 'already_recommended', message: `You already recommended ${t.title} to ${to.name}.` };
+      await log(fam.id, actor.id, 'recommendation.sent', { titleId: t.id, to: to.id });
+      return { outcome: 'recommended', message: `Recommended ${t.title} to ${to.name}. It shows up in ${to.name}'s Discover.` };
+    }
+
     async function streaksView(q) {
       const { actor, fam } = await loadFamilyFor(q.actor);
       const c = await cfg();
@@ -1131,6 +1371,12 @@
       if (m === 'POST' && seg[0] === 'meetups' && seg[1] && seg[2] === 'rsvp') return rsvp(seg[1], body);
       if (m === 'POST' && seg[0] === 'meetups' && seg[1] && seg[2] === 'cancel') return cancelRsvp(seg[1], body);
       if (m === 'POST' && seg[0] === 'rsvps' && seg[1]) return decideRsvp(seg[1], body);
+      if (m === 'GET' && seg[0] === 'authors' && seg[1]) return authorView(decodeURIComponent(seg[1]), query);
+      if (m === 'POST' && seg[0] === 'library-requests') return askLibrary(body);
+      if (m === 'POST' && seg[0] === 'library' && seg[1] === 'order') return orderCopies(body);
+      if (m === 'POST' && seg[0] === 'meetups' && seg[1] && seg[2] === 'questions') return askQuestion(seg[1], body);
+      if (m === 'POST' && seg[0] === 'questions' && seg[1]) return decideQuestion(seg[1], body);
+      if (m === 'POST' && seg[0] === 'recommendations') return recommendToFamily(body);
       if (m === 'POST' && seg[0] === 'reset') {
         if (!store.reset) throw new HttpError(403, 'Reset is only available in offline mode. In live mode, re-run npm run db:seed.');
         await store.reset();

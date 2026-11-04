@@ -109,7 +109,7 @@
     };
   })();
   const BIG_WINS = ['finished', 'instant_borrowed', 'going', 'approved'];
-  const SMALL_WINS = ['borrowed', 'listed', 'followed', 'hold_placed', 'reacted', 'requested'];
+  const SMALL_WINS = ['borrowed', 'listed', 'followed', 'hold_placed', 'reacted', 'requested', 'asked', 'recommended', 'sent', 'waiting_parent', 'ordered'];
   function celebrate(body) {
     if (!body) return;
     const at = state.lastClick || {};
@@ -128,6 +128,8 @@
     if (s === 'none') return '<span class="pill wait">Not at your libraries</span>';
     return '<span class="pill wait">Wait list</span>';
   }
+  const newAuthorPill = (t) => (t.newAuthor ? `<span class="pill new">${t.isDebut ? 'Debut' : 'New voice'}</span>` : '');
+  const authorLink = (name, member) => `<button type="button" class="linkish" data-author="${esc(name)}" data-member="${esc(member || '')}">${esc(name)}</button>`;
   function progressBar(pct, label) {
     return `<div class="bar" role="img" aria-label="${esc(label || `${pct}% read`)}"><span style="width:${Math.min(100, pct)}%"></span></div>`;
   }
@@ -199,8 +201,10 @@
     const d = r.body;
     state.members = d.members;
     if (isKid()) return kidHome(d);
-    const requests = d.pendingApprovals.length + d.meetupRequests.length;
+    const requests = d.pendingApprovals.length + d.meetupRequests.length + d.questionRequests.length;
     state.pending = requests;
+    const news = d.requestNews.map((n) => `<button type="button" class="notice ok" data-title="${n.titleId}" data-member="${n.memberId}"><b>Your request worked: ${esc(n.title)} is in</b>
+      <span class="small">${esc(n.libraryName)} added it after ${esc(n.name)} and other readers asked. Borrow it now.</span></button>`).join('');
     return `
       <div class="hero">${roo('')}<div class="bubble"><p class="muted small">Pinned demo date ${esc(d.now.slice(0, 10))}</p><h1>${esc(d.family.name)} library</h1></div></div>
       <div class="members">${d.members.map((m) => {
@@ -212,7 +216,8 @@
         </button>`;
       }).join('')}</div>
       ${requests ? `<button type="button" class="notice sun" data-go="approvals"><b>${plural(requests, 'request')} to review</b>
-        <span class="small">${d.pendingApprovals[0] ? `${esc(nameOf(d.pendingApprovals[0].memberId))} asked for ${esc(d.pendingApprovals[0].title)}` : `${esc(nameOf(d.meetupRequests[0].by))} wants to go to ${esc(d.meetupRequests[0].title)}`}</span></button>` : ''}
+        <span class="small">${d.pendingApprovals[0] ? `${esc(nameOf(d.pendingApprovals[0].memberId))} asked for ${esc(d.pendingApprovals[0].title)}` : d.meetupRequests[0] ? `${esc(nameOf(d.meetupRequests[0].by))} wants to go to ${esc(d.meetupRequests[0].title)}` : `${esc(d.questionRequests[0].by)} wrote a question for ${esc(d.questionRequests[0].author)}`}</span></button>` : ''}
+      ${news}
       ${d.nextMeetup ? `<button type="button" class="notice ok" data-go="events"><b>${esc(d.nextMeetup.title)}</b>
         <span class="small">${esc(when(d.nextMeetup.startsAt))} · ${esc(d.nextMeetup.venue)} · ${esc(d.nextMeetup.why[0] || '')} · ${plural(d.nextMeetup.seatsLeft, 'seat')} left</span></button>` : ''}
       <div class="section"><h2>Reading now</h2>${readingList(d.reading, false)}</div>
@@ -233,6 +238,9 @@
       <div class="hero">${roo('hop')}<div class="bubble"><h1>Hi ${esc(m.name)}!</h1><p class="muted">${streak && streak.readToday ? 'You read today. High five!' : 'Ready for a story?'} Books for ages ${m.bandMin}–${m.bandMax} show up first.</p></div></div>
       ${streak ? streakCard(streak, true) : ''}
       <div class="section"><h2>Reading now</h2>${readingList(mine, true)}</div>
+      ${d.recommendations.filter((x) => x.toMemberId === m.id).map((x) => `<button type="button" class="notice sun" data-title="${x.titleId}" data-member="${m.id}"><b>${esc(x.from)} thinks you'd like ${esc(x.title)}</b>
+        <span class="small">${x.note ? `“${esc(x.note)}”` : 'Tap to see it'}</span></button>`).join('')}
+      ${d.requestNews.filter((x) => x.memberId === m.id).map((x) => `<button type="button" class="notice ok" data-title="${x.titleId}" data-member="${m.id}"><b>You asked, the library got it: ${esc(x.title)}</b><span class="small">Borrow it now</span></button>`).join('')}
       ${d.listReady[m.id] ? `<button type="button" class="notice ok" data-go="lists"><b>${plural(d.listReady[m.id], 'book')} on your list ${d.listReady[m.id] === 1 ? 'is' : 'are'} ready</b><span class="small">Borrow ${d.listReady[m.id] === 1 ? 'it' : 'one'} tonight</span></button>` : ''}
       <div class="section"><h2>Coming soon</h2>${holdList(holds)}</div>
       <button type="button" class="btn sun" data-go="discover">Find something good</button>`;
@@ -345,8 +353,8 @@
     const followed = new Set(d.follows.map((f) => `${f.kind}:${f.value}`));
     const row = (t, extra) => `<li><div class="item">${cover(t)}<div class="grow">
         <button type="button" class="linkish title" data-title="${t.id}" data-member="${member}">${esc(t.title)}</button>
-        <div class="muted small">${esc(t.author)} · ${esc(t.level)}${t.rating && !(t.why || []).some((w) => w.startsWith('Loved by')) ? ` · loved by ${t.rating.pct}% of readers ${esc(d.member.band)}` : ''}</div>
-        <div>${statusPill(t.status, t.statusLabel)} ${t.onHold ? '<span class="pill wait">On hold</span>' : ''} ${t.onList ? '<span class="pill wait">On list</span>' : ''} ${t.needsOk ? '<span class="pill kid">Ask a grown-up</span>' : ''}</div>
+        <div class="muted small">${authorLink(t.author, member)} · ${esc(t.level)}${t.rating && !(t.why || []).some((w) => w.startsWith('Loved by')) ? ` · loved by ${t.rating.pct}% of readers ${esc(d.member.band)}` : ''}</div>
+        <div>${newAuthorPill(t)} ${statusPill(t.status, t.statusLabel)} ${t.onHold ? '<span class="pill wait">On hold</span>' : ''} ${t.onList ? '<span class="pill wait">On list</span>' : ''} ${t.needsOk ? '<span class="pill kid">Ask a grown-up</span>' : ''}</div>
         ${extra || ''}</div></div></li>`;
     return `
       <h1>Discover</h1>
@@ -358,9 +366,16 @@
       </form>
       ${s && s.status === 200 ? `<div class="section"><h2>Results for “${esc(state.q)}”</h2><ul class="list">${s.body.results.map((t) => row({ ...t, needsOk: isKid() && !t.inBand })).join('') || '<p class="muted">No matches.</p>'}</ul>
         <button type="button" class="btn quiet back" data-clear-search="1">Clear search</button></div>` : ''}
+      ${d.fromFamily.length ? `<div class="section"><h2>From your family</h2><ul class="list">${d.fromFamily.map((t) => row(t, `<p class="small accent">${esc(t.from)} recommends it${t.note ? `: “${esc(t.note)}”` : ''}</p>`)).join('')}</ul></div>` : ''}
+      <div class="section new-voices"><h2>New voices</h2><p class="small muted">First-time and emerging authors, beyond the bestseller lists. One book each, picked for ${esc(who)}.</p>
+        <ul class="list">${d.newVoices.map((t) => row(t, `<p class="small accent">${t.why.map(esc).join(' · ')}</p>
+          <div class="actions">${t.requestable ? `<button type="button" class="btn sun small" data-ask-library="${t.id}" data-member="${member}">Ask my library</button>` : t.status === 'available' && !t.needsOk ? `<button type="button" class="btn primary small" data-borrow-title="${t.id}" data-member="${member}">Borrow</button>` : ''}
+            <button type="button" class="btn ghost small" data-author="${esc(t.author)}" data-member="${member}">Meet ${esc(t.author)}</button></div>`)).join('') || '<p class="muted small">No new authors for this age right now.</p>'}</ul></div>
       <div class="section"><h2>Good picks for ${esc(who)}</h2>
         <p class="small muted">Based on what ${esc(who)} loved, finished and saved. Every pick says why.</p>
         <ul class="list">${d.picks.map((t) => row(t, `<p class="small accent">${t.why.map(esc).join(' · ')}</p>`)).join('') || '<p class="muted small">Finish a book and react to it to get picks.</p>'}</ul></div>
+      ${d.communityPicks.length ? `<div class="section community"><h2>Loved by families near you</h2><p class="small muted">Totals from readers at your libraries. No names are shared.</p>
+        <ul class="list">${d.communityPicks.map((t) => row(t, `<p class="small accent">${t.why.map(esc).join(' · ')}</p>`)).join('')}</ul></div>` : ''}
       ${d.comingSoon.length ? `<div class="section"><h2>Coming soon</h2><ul class="list">${d.comingSoon.map((t) => row(t, `
         <p class="small muted">${t.series ? `${esc(t.series)} #${t.seriesNo}` : 'New book'}${t.followed ? ' · you follow this' : ''} · your libraries have copies on order</p>
         <div class="actions">${t.onHold ? '' : `<button type="button" class="btn primary small" data-prehold="${t.id}" data-member="${member}">Get in line now</button>`}
@@ -422,19 +437,52 @@
         action = `${choose}<div class="actions"><button type="button" class="btn ${m.availability === 'full' ? 'ghost' : 'primary'}" data-rsvp="${m.id}">${m.availability === 'full' ? 'Join the waitlist' : 'Book free seats'}</button></div>
           ${m.requests.length ? `<p class="small">${esc(m.requests.map((q) => q.by).join(', '))} asked to go — answer in Approvals.</p>` : ''}`;
       }
+      const firstName = (m.author || 'the author').split(' ')[0];
+      const questions = m.takesQuestions ? `<details class="ask" ${m.myQuestions.length || m.format === 'online' ? 'open' : ''}><summary>Ask ${esc(firstName)} a question · ${m.questionCount} sent in</summary>
+          <label for="qq-${m.id}" class="small">${kid ? 'Write your question. A grown-up checks it first.' : 'Your question (3 to 200 characters)'}</label>
+          <textarea id="qq-${m.id}" rows="2" maxlength="200" placeholder="${kid ? 'How did you think of the story?' : 'What got you started writing for kids?'}"></textarea>
+          <button type="button" class="btn ${kid ? 'sun' : 'primary'} small" data-ask-question="${m.id}">${kid ? 'Send to a grown-up' : 'Send question'}</button>
+          ${m.myQuestions.map((x) => `<p class="small"><span class="pill ${x.status === 'sent' ? 'ok' : x.status === 'declined' ? 'bad' : 'kid'}">${x.status === 'sent' ? 'Sent' : x.status === 'declined' ? 'Not sent' : 'Waiting for a grown-up'}</span> ${esc(x.by)}: “${esc(x.text)}”</p>`).join('')}
+        </details>` : '';
       return `<li class="card">
-        <div class="row"><span class="pill ${m.venueKind === 'bookstore' ? 'kid' : 'ok'}">${esc(m.kind)} · ${esc(m.venueKind)}</span>
+        <div class="row"><span class="pill ${m.format === 'online' ? 'sky' : 'ok'}">${m.format === 'online' ? 'Online' : 'In person'}</span><span class="pill ${m.venueKind === 'bookstore' ? 'kid' : 'wait'}">${esc(m.kind)}</span>${m.newAuthor ? '<span class="pill new">New voice</span>' : ''}
           <span class="grow"></span>${m.availability === 'full' ? '<span class="pill bad">Full</span>' : m.availability === 'few' ? `<span class="pill check">${plural(m.seatsLeft, 'seat')} left</span>` : `<span class="pill wait">${m.seatsLeft} seats</span>`}</div>
         <h3>${esc(m.title)}</h3>
         <p class="small"><b>${esc(when(m.startsAt))}</b> · ${esc(m.venue)}, ${esc(m.address)}</p>
         <p class="small muted">${esc(m.ages)} · ${esc(m.priceLabel)}${m.goodFor.length ? ` · good for ${esc(m.goodFor.join(', '))}` : ''}${m.needsAdult ? ' · kids under 13 come with a grown-up' : ''}</p>
         ${m.why.length ? `<p class="small accent">${m.why.map(esc).join(' · ')}</p>` : ''}
         <p class="small">${esc(m.description)}</p>
-        ${action}</li>`;
+        ${m.author ? `<p class="small">About the author: ${authorLink(m.author)}</p>` : ''}
+        ${action}${questions}</li>`;
     }).join('');
     return `<h1>Author talks and meetups</h1>
-      <p class="small muted">Readings, signings, storytimes and book clubs at your libraries and nearby bookstores. Events tied to books your family reads come first. All venues and events are fictional.</p>
+      <p class="small muted">Readings, signings, online talks, storytimes and book clubs at your libraries and nearby bookstores. Events tied to books your family reads come first. All venues and events are fictional.</p>
       <ul class="list">${cards || '<p class="muted">No upcoming events.</p>'}</ul>`;
+  }
+
+  // ---------- author page ----------
+  async function viewAuthor() {
+    const r = await call('GET', `/api/authors/${encodeURIComponent(state.author)}`, { member: isKid() ? state.actor : (state.member || state.actor) });
+    if (r.status !== 200) return errorBox(r);
+    const d = r.body;
+    const a = d.author;
+    const member = d.member.id;
+    return `<button type="button" class="btn quiet back" data-go="discover">← Back</button>
+      <div class="card author-hero"><div class="row"><span class="avatar big" aria-hidden="true">${esc(a.name.split(' ').map((x) => x[0]).join(''))}</span>
+        <div class="grow"><h1 style="font-size:1.5rem">${esc(a.name)}</h1>
+          <p>${a.emerging ? `<span class="pill new">New voice · first book ${a.debutYear}</span>` : `<span class="pill wait">Writing since ${a.debutYear}</span>`} ${a.hometown ? `<span class="pill sky">From ${esc(a.hometown)}</span>` : ''}</p></div></div>
+        <p>${esc(a.bio)}</p>
+        <div class="actions"><span class="small muted">${a.followers.toLocaleString('en-US')} readers follow</span>
+          <button type="button" class="btn ${d.following ? 'ghost' : 'primary'} small" data-follow="author" data-value="${esc(a.name)}" data-on="${d.following ? 'false' : 'true'}" data-member="${member}">${d.following ? 'Following' : `Follow ${esc(a.name.split(' ')[0])}`}</button></div></div>
+      <div class="section"><h2>Books</h2><ul class="list">${d.books.map((t) => `<li><div class="item">${cover(t)}<div class="grow">
+        <button type="button" class="linkish title" data-title="${t.id}" data-member="${member}">${esc(t.title)}</button>
+        <div class="muted small">${esc(t.level)}${t.series ? ` · ${esc(t.series)} #${t.seriesNo}` : ''}${t.isDebut ? ' · first book' : ''}</div>
+        <div>${statusPill(t.status, t.statusLabel)} ${t.needsOk ? '<span class="pill kid">Ask a grown-up</span>' : ''}</div></div></div></li>`).join('')}</ul></div>
+      <div class="section"><h2>Meet ${esc(a.name.split(' ')[0])}</h2>
+        ${d.events.length ? `<ul class="list">${d.events.map((m) => `<li class="card"><div class="row"><span class="pill ${m.format === 'online' ? 'sky' : 'ok'}">${m.format === 'online' ? 'Online' : 'In person'}</span><span class="pill wait">${esc(m.kind)}</span><span class="grow"></span><span class="pill wait">${m.seatsLeft} seats</span></div>
+          <h3>${esc(m.title)}</h3><p class="small"><b>${esc(when(m.startsAt))}</b> · ${esc(m.venue)}</p>
+          <p class="small">${esc(m.description)}</p><div class="actions"><button type="button" class="btn primary small" data-go="events">${m.takesQuestions ? 'Book or send a question' : 'See the event'}</button></div></li>`).join('')}</ul>`
+          : '<p class="muted small">No events scheduled. Follow to hear about the next one.</p>'}</div>`;
   }
 
   // ---------- title ----------
@@ -477,19 +525,34 @@
       : '');
     const hold = d.hold ? `<div class="notice ok"><b>On hold for ${esc(d.member.name)}</b><span class="small">#${d.hold.position} at ${esc(d.hold.libraryName)} · likely ${esc(d.hold.waitLabel)}</span></div>` : '';
     const next = d.nextUp && !coming ? nextUpBlock(d) : '';
+    const rq = d.request;
+    const request = rq ? `<div class="card ask-library"><h3>Not at your libraries yet</h3>
+        <p class="small">${rq.demand ? `<b>${rq.demand} famil${rq.demand === 1 ? 'y' : 'ies'}</b> at your libraries asked for this book.` : 'Be the first to ask for this book.'} Librarians see the total, never your name. Nothing is bought for you.</p>
+        ${rq.asked ? `<div class="notice ok"><b>${esc(rq.askedBy.join(' and '))} asked ${esc(rq.libraryName)}</b><span class="small">We'll tell you when it's in.</span></div>`
+          : `<button type="button" class="btn sun" data-ask-library="${t.id}" data-member="${d.member.id}">Ask my library</button>`}</div>` : '';
+    const recBy = d.recommendedBy.map((x) => `<div class="notice sun"><b>${esc(x.from)} recommends this</b><span class="small">${x.note ? `“${esc(x.note)}”` : 'From your family'}</span></div>`).join('');
+    const others = state.members.filter((m) => m.id !== state.actor);
+    const recommend = d.canRecommend && others.length ? `<details class="card share"><summary><b>Recommend or share</b></summary>
+        <label for="rec-to" class="small">Recommend to</label>
+        <select id="rec-to">${others.map((m) => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select>
+        <label for="rec-note" class="small">A short note (optional)</label>
+        <input id="rec-note" maxlength="140" placeholder="Why you liked it">
+        <div class="actions"><button type="button" class="btn primary small" data-recommend="${t.id}">Recommend</button>
+          <button type="button" class="btn ghost small" data-copy-share="1">Copy share text</button></div>
+        <p class="small muted" id="share-text">${esc(d.shareText)}</p></details>` : '';
     return `
       <button type="button" class="btn quiet back" data-go="home">← Back</button>
       <div class="row" style="align-items:flex-start">${cover(t, true)}
         <div class="grow section"><h1 style="font-size:1.4rem">${esc(t.title)}</h1>
-          <p class="muted">${esc(t.author)}${t.series ? ` · ${esc(t.series)} #${t.seriesNo}` : ''} · ${t.pages} pages</p>
-          <p><span class="pill ${t.levelKnown ? 'wait' : 'check'}">${esc(t.level)}</span> <span class="small muted">for ${esc(d.member.name)}</span></p>
+          <p class="muted">${authorLink(t.author, d.member.id)}${t.series ? ` · ${esc(t.series)} #${t.seriesNo}` : ''} · ${t.pages} pages</p>
+          <p><span class="pill ${t.levelKnown ? 'wait' : 'check'}">${esc(t.level)}</span> ${d.author.emerging ? `<span class="pill new">${d.author.debutYear ? `New voice since ${d.author.debutYear}` : 'New voice'}</span>` : ''} <span class="small muted">for ${esc(d.member.name)}</span></p>
         </div></div>
-      ${hold}${actions}${extras}${instant}${next}
-      <div class="card"><h3>At your libraries</h3>
+      ${recBy}${hold}${rq ? '' : actions}${request}${extras}${instant}${next}${recommend}
+      ${d.availability.length ? `<div class="card"><h3>At your libraries</h3>
         <table class="avail"><tbody>${d.availability.map((a) => `<tr>
           <td><b>${esc(a.libraryName)}</b><br><span class="muted small">${a.status === 'coming' ? `${a.onOrder} on order` : `${a.owned} cop${a.owned === 1 ? 'y' : 'ies'}`}${a.status === 'check' ? ` · last synced ${esc(a.asOf.slice(0, 10))}` : ''}</span></td>
           <td>${a.status === 'available' ? '<span class="pill ok">Available now</span>' : a.status === 'check' ? '<span class="pill check">Check availability</span>' : a.status === 'coming' ? `<span class="pill kid">${esc(a.statusLabel)}</span><br><span class="small muted">new hold: ${esc(a.newHoldWaitLabel)}</span>` : `<span class="pill wait">${esc(a.statusLabel)}</span><br><span class="small muted">new hold: ${esc(a.newHoldWaitLabel)}</span>`}</td>
-        </tr>`).join('')}</tbody></table></div>`;
+        </tr>`).join('')}</tbody></table></div>` : ''}`;
   }
 
   function nextUpBlock(d) {
@@ -516,6 +579,7 @@
     if (r.status !== 200) return errorBox(r);
     const pend = r.body.pendingApprovals;
     const ev = r.body.meetupRequests;
+    const qs = r.body.questionRequests;
     return `<h1>Approvals</h1><p class="muted small">Books inside each kid's age band are approved automatically. You only see exceptions, and requests to go to events.</p>
       ${pend.length ? `<ul class="list">${pend.map((a) => `<li class="card">
         <div><b>${esc(nameOf(a.memberId))}</b> asked to borrow <b>${esc(a.title)}</b></div>
@@ -530,7 +594,12 @@
         <p class="small muted">${esc(when(q.startsAt))}. Approving books seats for ${esc(nameOf(q.by))} and you.</p>
         <div class="actions"><button type="button" class="btn primary small" data-rsvp-decide="approve" data-rsvp-id="${q.id}">Book it</button>
           <button type="button" class="btn ghost small" data-rsvp-decide="decline" data-rsvp-id="${q.id}">Not this time</button></div></li>`).join('')}</ul>` : ''}
-      ${!pend.length && !ev.length ? '<div class="notice ok"><b>Nothing to review</b><span class="small">Switch to Arjun and ask for Deep Sea Detectives (record R5), or ask to go to an event, to see a request arrive.</span></div>' : ''}`;
+      ${qs.length ? `<h2>Questions for authors</h2><ul class="list">${qs.map((q) => `<li class="card">
+        <div><b>${esc(q.by)}</b> wants to ask <b>${esc(q.author)}</b>:</div><p>“${esc(q.text)}”</p>
+        <p class="small muted">For ${esc(q.meetupTitle)}. Only the question is sent, with a first name.</p>
+        <div class="actions"><button type="button" class="btn primary small" data-q-decide="approve" data-q-id="${q.id}">Send it</button>
+          <button type="button" class="btn ghost small" data-q-decide="decline" data-q-id="${q.id}">Don't send</button></div></li>`).join('')}</ul>` : ''}
+      ${!pend.length && !ev.length && !qs.length ? '<div class="notice ok"><b>Nothing to review</b><span class="small">Switch to Arjun and ask for Deep Sea Detectives (record R5), or ask to go to an event, to see a request arrive.</span></div>' : ''}`;
   }
 
   async function viewDigest() {
@@ -557,7 +626,13 @@
     const libs = r.body.libraries;
     const health = await api.call('GET', '/api/health', {});
     const stripeMode = (health.body && health.body.stripe) || 'simulated';
-    return `<h1>Payments</h1>
+    const demand = libs.map((l) => `<div class="card"><div class="row"><h3 class="grow">${esc(l.name)}</h3><span class="pill sky">Library side</span></div>
+        ${l.demand.length ? `<table class="invoice demand"><thead><tr><th>Book readers asked for</th><th>Asks</th><th></th></tr></thead><tbody>${l.demand.map((x) => `<tr>
+          <td><b>${esc(x.title)}</b> ${x.newAuthor ? '<span class="pill new">Debut</span>' : ''}<br><span class="small muted">${esc(x.author)} · ${esc(x.ages)}</span></td>
+          <td>${x.status === 'ordered' ? '—' : x.requests}</td>
+          <td>${x.status === 'ordered' ? '<span class="pill ok">Added, readers told</span>' : `<button type="button" class="btn primary small" data-order-title="${x.titleId}" data-order-lib="${l.id}">Add 3 copies</button>`}</td></tr>`).join('')}</tbody></table>`
+          : '<p class="small muted">No requests yet.</p>'}</div>`).join('');
+    return `<h1>Payments and reader demand</h1>
       <p class="muted small">Families never pay. When a series book has a long wait, the library can pay for an instant copy. Readaroo records each one as a Stripe usage charge and never spends past the library's cap. Stripe mode: <b>${esc(stripeMode)}</b>.</p>
       <div class="card"><h3>How the money moves</h3>
         <div class="flow">
@@ -576,6 +651,8 @@
             <tfoot><tr><td colspan="2">Invoice preview from this demo</td><td>${money(total)}</td></tr></tfoot></table>
         </div>`;
       }).join('')}
+      <h2>Reader demand</h2><p class="muted small">“Ask my library” requests, as totals by book. Librarians never see who asked. Adding copies tells every family who asked.</p>
+      ${demand}
       <h2>Budgets</h2><p class="muted small">Today is ${esc(r.body.today)}. Earlier spend this month came from other families.</p>
       ${libs.map((l) => {
         const dp = Math.min(100, Math.round((l.spentTodayCents / l.dailyCapCents) * 100));
@@ -599,7 +676,7 @@
     return `<div class="card"><div class="row"><h2 class="grow">Demo records</h2><span class="chip demo">Synthetic</span></div>
         <p class="small muted">Each record proves one behavior. Open it to jump in as the right family member.</p>
         ${records.map((r) => `<div class="record"><div class="row"><span class="rid">${esc(r.id)}</span><b class="grow">${esc(r.label)}</b>
-          <button type="button" class="btn ghost small" data-record="${r.id}" data-title="${r.titleId || ''}" data-member="${r.memberId}" data-rview="${r.view || 'title'}" data-rborrow="${r.borrowId || ''}">Open</button></div>
+          <button type="button" class="btn ghost small" data-record="${r.id}" data-title="${r.titleId || ''}" data-member="${r.memberId}" data-rview="${r.view || 'title'}" data-rborrow="${r.borrowId || ''}" data-rauthor="${esc(r.author || '')}">Open</button></div>
           <span class="small muted">${esc(r.proves)}</span></div>`).join('')}
         <button type="button" class="btn ghost small" data-reset="1">Reset demo data</button>
       </div>
@@ -630,7 +707,7 @@
       if (h.status === 200) state.members = h.body.members;
     }
     $('#actor').innerHTML = state.members.map((m) => `<option value="${m.id}" ${m.id === state.actor ? 'selected' : ''}>${esc(m.name)}${m.role === 'kid' ? ` (${m.age})` : ' (parent)'}</option>`).join('');
-    const views = { home: viewHome, discover: viewDiscover, lists: viewLists, events: viewEvents, title: viewTitle, reader: viewReader, approvals: viewApprovals, digest: viewDigest, library: viewLibrary, guide: guidePanel, more: viewMore };
+    const views = { home: viewHome, discover: viewDiscover, lists: viewLists, events: viewEvents, title: viewTitle, reader: viewReader, approvals: viewApprovals, digest: viewDigest, library: viewLibrary, guide: guidePanel, more: viewMore, author: viewAuthor };
     document.body.classList.toggle('kid', isKid());
     const body = await (views[state.view] || viewHome)();
     const main = $('#main');
@@ -664,6 +741,7 @@
       state.actor = ds.member;
       if (ds.rview === 'reader') return go('reader', { borrowId: ds.rborrow });
       if (ds.rview === 'title') return go('title', { titleId: ds.title, member: ds.member });
+      if (ds.rview === 'author') return go('author', { author: ds.rauthor, member: ds.member });
       return go(ds.rview);
     }
     if (ds.read) { state.reader = null; return go('reader', { borrowId: ds.read }); }
@@ -671,6 +749,24 @@
     if (ds.discoverMember) return go('discover', { discoverMember: ds.discoverMember });
     if (ds.clearSearch) { state.q = ''; return render(); }
     if (ds.title) return go('title', { titleId: ds.title, member: ds.member || state.actor });
+    if (ds.author) return go('author', { author: ds.author, member: ds.member || state.member || state.actor });
+    if (ds.askLibrary) return act('POST', '/api/library-requests', { member: ds.member || state.member, titleId: ds.askLibrary });
+    if (ds.orderTitle) return act('POST', '/api/library/order', { libraryId: ds.orderLib, titleId: ds.orderTitle, copies: 3 });
+    if (ds.qDecide) return act('POST', `/api/questions/${ds.qId}`, { decision: ds.qDecide });
+    if (ds.askQuestion) {
+      const text = ($(`#qq-${ds.askQuestion}`).value || '').trim();
+      if (text.length < 3) { toast('Write a question first (at least 3 characters).'); return; }
+      return act('POST', `/api/meetups/${ds.askQuestion}/questions`, { text });
+    }
+    if (ds.recommend) return act('POST', '/api/recommendations', { titleId: ds.recommend, to: $('#rec-to').value, note: $('#rec-note').value });
+    if (ds.copyShare) {
+      const text = $('#share-text').textContent;
+      try { await navigator.clipboard.writeText(text); toast('Copied. Paste it in a message to a friend.'); } catch (err) {
+        const range = document.createRange(); range.selectNodeContents($('#share-text'));
+        const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range); toast('Selected. Copy it to share.');
+      }
+      return;
+    }
     if (ds.reset) return act('POST', '/api/reset', {}, () => { state.view = 'home'; state.reader = null; });
     if (ds.page) {
       const rd = state.reader;
@@ -734,7 +830,7 @@
 
   try {
     const v = new URLSearchParams(location.search).get('view');
-    if (['discover', 'events', 'lists', 'home'].includes(v)) state.view = v;
+    if (['discover', 'events', 'lists', 'home', 'library'].includes(v)) state.view = v;
   } catch (e) { /* no query string support: start at home */ }
   render();
 })();

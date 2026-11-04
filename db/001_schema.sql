@@ -1,7 +1,7 @@
 -- Readaroo schema (Postgres 14+). Safe to re-run: drops and recreates the readaroo tables.
 -- Run as a database owner:  psql "$DATABASE_URL" -f db/001_schema.sql
 
-DROP TABLE IF EXISTS events, meter_events, feedback, reactions, approvals, sessions, rsvps, meetups, follows, tbr, shelf_titles, shelves, borrows, holds, copies, titles, cards, members, families, libraries, app_config CASCADE;
+DROP TABLE IF EXISTS recommendations, event_questions, library_requests, community_signals, authors, events, meter_events, feedback, reactions, approvals, sessions, rsvps, meetups, follows, tbr, shelf_titles, shelves, borrows, holds, copies, titles, cards, members, families, libraries, app_config CASCADE;
 
 CREATE TABLE app_config (
   key   text PRIMARY KEY,
@@ -158,6 +158,9 @@ CREATE TABLE meetups (
   seats_taken integer NOT NULL DEFAULT 0,
   price_cents integer NOT NULL DEFAULT 0,
   description text NOT NULL,
+  format      text NOT NULL DEFAULT 'in_person' CHECK (format IN ('in_person', 'online')),
+  questions   boolean NOT NULL DEFAULT false,
+  question_count integer NOT NULL DEFAULT 0 CHECK (question_count >= 0),
   CHECK (seats_taken <= capacity)
 );
 
@@ -210,6 +213,61 @@ CREATE TABLE meter_events (
   at              timestamptz NOT NULL
 );
 
+-- v0.4: authors, reader demand, questions for authors, family recommendations
+CREATE TABLE authors (
+  name           text PRIMARY KEY,
+  emerging       boolean NOT NULL DEFAULT false,
+  debut_title_id text REFERENCES titles(id),
+  debut_year     integer,
+  hometown       text,
+  followers      integer NOT NULL DEFAULT 0,
+  bio            text NOT NULL
+);
+
+-- Synthetic aggregate signals from other families (no individual data)
+CREATE TABLE community_signals (
+  title_id   text NOT NULL REFERENCES titles(id),
+  library_id text NOT NULL REFERENCES libraries(id),
+  requests   integer NOT NULL DEFAULT 0 CHECK (requests >= 0),
+  loves      integer NOT NULL DEFAULT 0 CHECK (loves >= 0),
+  PRIMARY KEY (title_id, library_id)
+);
+
+CREATE TABLE library_requests (
+  id           text PRIMARY KEY,
+  family_id    text NOT NULL REFERENCES families(id),
+  member_id    text NOT NULL REFERENCES members(id),
+  title_id     text NOT NULL REFERENCES titles(id),
+  library_id   text NOT NULL REFERENCES libraries(id),
+  status       text NOT NULL CHECK (status IN ('requested', 'ordered')),
+  created_at   timestamptz NOT NULL,
+  fulfilled_at timestamptz,
+  UNIQUE (member_id, title_id)
+);
+
+CREATE TABLE event_questions (
+  id         text PRIMARY KEY,
+  meetup_id  text NOT NULL REFERENCES meetups(id),
+  family_id  text NOT NULL REFERENCES families(id),
+  member_id  text NOT NULL REFERENCES members(id),
+  text       text NOT NULL CHECK (char_length(text) BETWEEN 3 AND 200),
+  status     text NOT NULL CHECK (status IN ('waiting_parent', 'sent', 'declined')),
+  created_at timestamptz NOT NULL,
+  decided_by text
+);
+
+CREATE TABLE recommendations (
+  id          text PRIMARY KEY,
+  family_id   text NOT NULL REFERENCES families(id),
+  from_member text NOT NULL REFERENCES members(id),
+  to_member   text NOT NULL REFERENCES members(id),
+  title_id    text NOT NULL REFERENCES titles(id),
+  note        text CHECK (note IS NULL OR char_length(note) <= 140),
+  created_at  timestamptz NOT NULL,
+  UNIQUE (from_member, to_member, title_id),
+  CHECK (from_member <> to_member)
+);
+
 -- Append-only audit trail
 CREATE TABLE events (
   seq       bigserial PRIMARY KEY,
@@ -229,7 +287,8 @@ BEGIN
   END IF;
 END $$;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO readaroo_app;
-GRANT INSERT, UPDATE ON holds, borrows, approvals, reactions, feedback, meter_events, copies, libraries, sessions, rsvps, meetups TO readaroo_app;
+GRANT INSERT, UPDATE ON holds, borrows, approvals, reactions, feedback, meter_events, copies, libraries, sessions, rsvps, meetups, library_requests, event_questions, community_signals TO readaroo_app;
+GRANT INSERT ON recommendations TO readaroo_app;
 GRANT INSERT, DELETE ON tbr, follows TO readaroo_app;
 GRANT INSERT ON events TO readaroo_app;
 GRANT USAGE ON SEQUENCE events_seq_seq TO readaroo_app;

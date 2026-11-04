@@ -166,7 +166,7 @@ test('R14 meetups: matched to the family, past events hidden, kids see their age
   assert.ok(okafor.why.includes('Arjun loved The Moon Fox'));
   assert.equal(okafor.seatsLeft, 3);
   const kid = await api('GET', '/api/meetups?actor=m-maya');
-  assert.deepEqual(kid.body.meetups.map((m) => m.id), ['meet-storytime']);
+  assert.deepEqual(kid.body.meetups.map((m) => m.id).sort(), ['meet-bus44', 'meet-storytime'], 'Maya (6) only sees events for her age');
 });
 
 test('R14 booking: adds a grown-up for under-13s, waitlists when full, frees seats on cancel', async () => {

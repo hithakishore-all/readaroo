@@ -185,6 +185,44 @@ function createPostgresStore(connectionString) {
     async releaseSeats(meetupId, n) {
       await q('UPDATE meetups SET seats_taken = GREATEST(0, seats_taken - $2) WHERE id = $1', [meetupId, n]);
     },
+    // ---- v0.4: authors, reader demand, questions, recommendations
+    async listAuthors() { return rows(await q('SELECT * FROM authors ORDER BY name')); },
+    async getAuthor(name) { return row((await q('SELECT * FROM authors WHERE name = $1', [name])).rows[0]); },
+    async listCommunity() { return rows(await q('SELECT * FROM community_signals ORDER BY title_id, library_id')); },
+    async listLibraryRequests() { return rows(await q('SELECT * FROM library_requests ORDER BY created_at, id')); },
+    async addLibraryRequest(r) {
+      const res = await q(`INSERT INTO library_requests (id, family_id, member_id, title_id, library_id, status, created_at)
+                           VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (member_id, title_id) DO NOTHING`,
+      [r.id, r.familyId, r.memberId, r.titleId, r.libraryId, r.status, r.createdAt]);
+      return res.rowCount === 1;
+    },
+    async markRequestsOrdered(titleId, libraryId, at) {
+      const r = await q(`UPDATE library_requests SET status = 'ordered', fulfilled_at = $3
+                         WHERE title_id = $1 AND library_id = $2 AND status = 'requested'`, [titleId, libraryId, at]);
+      await q('UPDATE community_signals SET requests = 0 WHERE title_id = $1 AND library_id = $2', [titleId, libraryId]);
+      return r.rowCount;
+    },
+    async addCopies(titleId, libraryId, n, asOf) {
+      await q(`INSERT INTO copies (title_id, library_id, owned, available, queue, as_of) VALUES ($1,$2,$3,$3,0,$4)
+               ON CONFLICT (title_id, library_id) DO UPDATE SET owned = copies.owned + EXCLUDED.owned,
+                 available = copies.available + EXCLUDED.available, as_of = EXCLUDED.as_of`, [titleId, libraryId, n, asOf]);
+    },
+    async listQuestions() { return rows(await q('SELECT * FROM event_questions ORDER BY created_at, id')); },
+    async addQuestion(x) {
+      await q(`INSERT INTO event_questions (id, meetup_id, family_id, member_id, text, status, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [x.id, x.meetupId, x.familyId, x.memberId, x.text, x.status, x.createdAt]);
+    },
+    async updateQuestion(id, p) {
+      await q('UPDATE event_questions SET status = $2, decided_by = $3 WHERE id = $1', [id, p.status, p.decidedBy || null]);
+    },
+    async bumpQuestionCount(meetupId) { await q('UPDATE meetups SET question_count = question_count + 1 WHERE id = $1', [meetupId]); },
+    async listRecommendations() { return rows(await q('SELECT * FROM recommendations ORDER BY created_at, id')); },
+    async addRecommendation(r) {
+      const res = await q(`INSERT INTO recommendations (id, family_id, from_member, to_member, title_id, note, created_at)
+                           VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING`,
+      [r.id, r.familyId, r.fromMember, r.toMember, r.titleId, r.note, r.createdAt]);
+      return res.rowCount === 1;
+    },
     async close() { await pool.end(); },
   };
 }

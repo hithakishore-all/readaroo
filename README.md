@@ -2,6 +2,8 @@
 
 # Readaroo
 
+![Readaroo demo](docs/readaroo-demo.gif)
+
 **Never wait for the next book, and never read alone.**
 
 Readaroo is a family library app prototype. When a book your kid wants is on hold, it finds similar books you can borrow from your libraries tonight. It keeps one holds list across every library card in the family, lets parents set age bands and approve exceptions, and sends a weekly family reading digest. Libraries can fund instant borrows for series continuations, metered through Stripe in test mode, with a hard daily and monthly cap that is never exceeded.

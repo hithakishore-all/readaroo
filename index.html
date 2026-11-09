@@ -306,9 +306,92 @@ details.ask .btn { align-self: flex-start; }
 .ask-library { border: 2px dashed #F5C84A; background: var(--sun-soft); }
 .invoice.demand td { vertical-align: middle; }
 
+.wt { max-width: 1180px; margin: 4px auto 22px; }
+.wt-head { margin-bottom: 14px; } .wt-head h1 { margin-bottom: 4px; } .wt-head p { max-width: 760px; }
+.wt-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+.wt video { width: 100%; aspect-ratio: 16 / 10; display: block; background: #0d1530; border-radius: 18px; border: 2px solid var(--line); box-shadow: var(--lift); }
+.wt-ch { background: var(--surface); border: 2px solid var(--line); border-radius: 18px; padding: 12px; box-shadow: var(--lift); }
+.wt-ch h2 { font-size: 1.05rem; margin: 2px 6px 8px; }
+.wt-ch ol { list-style: none; margin: 0; padding: 0; max-height: 470px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
+.wt-ch button { all: unset; box-sizing: border-box; cursor: pointer; display: flex; gap: 10px; width: 100%; padding: 7px 8px; border-radius: 12px; }
+.wt-ch button:hover { background: var(--sunk); }
+.wt-ch button:focus-visible { outline: 3px solid var(--sky); }
+.wt-ch button[aria-current="true"] { background: var(--accent-soft); }
+.wt-time { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); flex: none; width: 34px; padding-top: 1px; }
+.wt-txt { display: flex; flex-direction: column; min-width: 0; }
+.wt-who { font-size: 0.74rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.wt-who i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.wt-title { font-size: 0.92rem; font-weight: 700; line-height: 1.25; }
+.wt-try { margin-top: 26px; font-size: 1.5rem; } .wt-try-p { margin-top: 4px; }
+@media (max-width: 899px) { .wt-grid { grid-template-columns: minmax(0, 1fr); } .wt-ch ol { max-height: 300px; } }
+
 </style>
 </head>
 <body>
+<section class="wt" aria-labelledby="wt-h">
+  <div class="wt-head"><h1 id="wt-h">Readaroo in 3 minutes</h1>
+    <p class="muted">A silent, captioned walkthrough of the real app: Arjun (9) on his phone, Priya the parent, and the Maple County librarian. All data is fictional; Stripe runs in test mode.</p></div>
+  <div class="wt-grid">
+    <video id="wt-video" controls playsinline preload="metadata" poster="docs/video/readaroo-walkthrough-poster.jpg">
+      <source src="docs/video/readaroo-walkthrough.mp4" type="video/mp4">
+      Your browser can't play this video. <a href="docs/video/readaroo-walkthrough.mp4">Download it</a>.
+    </video>
+    <nav class="wt-ch" aria-label="Video chapters"><h2>Chapters</h2><ol id="wt-list"><li><button type="button" data-t="0">
+      <span class="wt-time">0:00</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#7A5B00"><i style="background:#FFC93C"></i>Readaroo</span>
+      <span class="wt-title">Readaroo in 3 minutes</span></span></button></li><li><button type="button" data-t="7.52">
+      <span class="wt-time">0:07</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#9A6200"><i style="background:#FFB020"></i>Arjun</span>
+      <span class="wt-title">Five minutes a day counts</span></span></button></li><li><button type="button" data-t="13.99">
+      <span class="wt-time">0:13</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#9A6200"><i style="background:#FFB020"></i>Arjun</span>
+      <span class="wt-title">The book he wants is on hold</span></span></button></li><li><button type="button" data-t="21.8">
+      <span class="wt-time">0:21</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#9A6200"><i style="background:#FFB020"></i>Arjun</span>
+      <span class="wt-title">The wait becomes a read</span></span></button></li><li><button type="button" data-t="32.36">
+      <span class="wt-time">0:32</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#9A6200"><i style="background:#FFB020"></i>Arjun</span>
+      <span class="wt-title">Mid-series? The library can pay</span></span></button></li><li><button type="button" data-t="51.22">
+      <span class="wt-time">0:51</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#9A6200"><i style="background:#FFB020"></i>Arjun</span>
+      <span class="wt-title">Too old for him? A grown-up decides</span></span></button></li><li><button type="button" data-t="71.9">
+      <span class="wt-time">1:11</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#9A6200"><i style="background:#FFB020"></i>Arjun</span>
+      <span class="wt-title">New authors get found, too</span></span></button></li><li><button type="button" data-t="91.06">
+      <span class="wt-time">1:31</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#5B3FE0"><i style="background:#8B6CFF"></i>Priya</span>
+      <span class="wt-title">Only the exceptions reach a parent</span></span></button></li><li><button type="button" data-t="99.36">
+      <span class="wt-time">1:39</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#5B3FE0"><i style="background:#8B6CFF"></i>Priya</span>
+      <span class="wt-title">One tap, with a reason</span></span></button></li><li><button type="button" data-t="108.52">
+      <span class="wt-time">1:48</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#5B3FE0"><i style="background:#8B6CFF"></i>Priya</span>
+      <span class="wt-title">It stops at the cap, every time</span></span></button></li><li><button type="button" data-t="125.22">
+      <span class="wt-time">2:05</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#0E7A70"><i style="background:#2EC4B6"></i>Library</span>
+      <span class="wt-title">Every instant borrow is one Stripe charge</span></span></button></li><li><button type="button" data-t="135">
+      <span class="wt-time">2:15</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#0E7A70"><i style="background:#2EC4B6"></i>Library</span>
+      <span class="wt-title">A hard budget, daily and monthly</span></span></button></li><li><button type="button" data-t="141.79">
+      <span class="wt-time">2:21</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#0E7A70"><i style="background:#2EC4B6"></i>Library</span>
+      <span class="wt-title">Demand as totals, never names</span></span></button></li><li><button type="button" data-t="156.36">
+      <span class="wt-time">2:36</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#9A6200"><i style="background:#FFB020"></i>Arjun</span>
+      <span class="wt-title">You asked, the library got it</span></span></button></li><li><button type="button" data-t="167.23">
+      <span class="wt-time">2:47</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#5B3FE0"><i style="background:#8B6CFF"></i>Priya</span>
+      <span class="wt-title">Never read alone</span></span></button></li><li><button type="button" data-t="179.84">
+      <span class="wt-time">2:59</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#7A5B00"><i style="background:#FFC93C"></i>Readaroo</span>
+      <span class="wt-title">Every action leaves a record</span></span></button></li><li><button type="button" data-t="187.79">
+      <span class="wt-time">3:07</span>
+      <span class="wt-txt"><span class="wt-who" style="color:#7A5B00"><i style="background:#FFC93C"></i>Readaroo</span>
+      <span class="wt-title">Try it yourself</span></span></button></li></ol></nav>
+  </div>
+  <h2 class="wt-try">Try it yourself</h2>
+  <p class="muted small wt-try-p">The same app runs below, entirely in your browser. Switch people with <b>Acting as</b>, or open any record in the Demo guide.</p>
+</section>
 <header class="topbar">
   <div class="brand" id="brand">Readaroo</div>
   <span class="chip demo">Synthetic demo</span>
@@ -2769,6 +2852,18 @@ details.ask .btn { align-self: flex-start; }
   render();
 })();
 
+</script>
+<script>
+
+(function () {
+  var v = document.getElementById('wt-video'); if (!v) return;
+  var btns = Array.prototype.slice.call(document.querySelectorAll('#wt-list button'));
+  btns.forEach(function (b) { b.addEventListener('click', function () { v.currentTime = Number(b.dataset.t) + 0.05; v.play().catch(function () {}); }); });
+  v.addEventListener('timeupdate', function () {
+    var cur = null; btns.forEach(function (b) { if (Number(b.dataset.t) <= v.currentTime + 0.1) cur = b; });
+    btns.forEach(function (b) { if (b === cur) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); });
+  });
+})();
 </script>
 </body>
 </html>

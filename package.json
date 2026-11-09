@@ -17,6 +17,8 @@
     "stripe:setup": "node scripts/stripe-setup.js",
     "data": "python3 data/generate_data.py",
     "build:demo": "node scripts/build-demo.js",
+    "build:pages": "node scripts/build-demo.js --video --out=index.html",
+    "video": "scripts/video/make-video.sh",
     "build:mobile": "node scripts/build-demo.js --mobile --out=mobile/www/index.html",
     "mobile:android": "npm run build:mobile && npx cap sync android && npx cap open android",
     "mobile:ios": "npm run build:mobile && npx cap sync ios && npx cap open ios"

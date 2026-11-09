@@ -8,3 +8,6 @@ node_modules/
 mobile/www/
 android/
 ios/
+video-build/
+video-build.server.log
+__pycache__/

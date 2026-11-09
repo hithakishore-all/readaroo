@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — 2026-11-09
+
+- Live demo page opens with a 3-minute silent, captioned walkthrough video of the real app, with clickable chapters; the interactive demo follows under "Try it yourself"
+- `make video` re-records it: Playwright drives the app as Arjun (phone), Priya and the librarian, with a caption, highlight and cursor overlay (`scripts/video/`)
+- `npm run build:pages` rebuilds the live page; `demo/readaroo-demo.html` is unchanged
+
 ## 0.4.0 — 2026-11-04
 
 - Author discovery: New voices shelf in Discover (one book per debut or emerging author, with reasons) and author pages with bio, books, events and Follow

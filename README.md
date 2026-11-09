@@ -25,6 +25,8 @@ Version 0.4 helps new authors find readers, and helps libraries see what their c
   <img src="docs/screenshots/19-reader-demand.png" alt="The library side: requests as totals by book, with Add 3 copies" width="400">
 </p>
 
+**[Watch the 3-minute walkthrough](https://hithakishore-all.github.io/readaroo/)**: a silent, captioned video of the real app with clickable chapters, from Arjun on his phone to Priya's approvals and the librarian's Stripe charges.
+
 **[Try the live demo](https://hithakishore-all.github.io/readaroo/)**: it runs entirely in your browser with synthetic data, no install. Open the **Demo guide** and click any record, R1 to R19.
 
 ![Readaroo v0.4 tour: Next-Up, parent approval, instant borrow under a cap, new authors, Ask my library and the librarian's demand view](docs/readaroo-demo.gif)
@@ -300,6 +302,17 @@ Every request names the acting family member as `actor` (query string for GET, J
 | GET | `/api/demo-records` | | The 19 demo records |
 | POST | `/api/reset` | | Restores demo data (offline only; 403 in live mode) |
 
+## Re-recording the walkthrough video
+
+The video on the live demo page is filmed from the real app, not a mock-up. After changing the app, run:
+
+```bash
+pip install playwright && python3 -m playwright install chromium   # once; also needs ffmpeg
+make video        # or: npm run video
+```
+
+It starts the app offline on fresh data, drives it with Playwright as Arjun (phone), Priya and the librarian, records Chrome's screencast with captions and highlights from `scripts/video/overlay.js`, and writes `docs/video/` (MP4, poster, chapters) and the live page `index.html`. Contact sheets for a quick check land in `video-build/sheets/`.
+
 ## Testing
 
 ```bash
@@ -335,7 +348,8 @@ readaroo/
 ├── db/
 │   ├── 001_schema.sql      Tables + least-privilege role
 │   └── 002_seed.sql        Generated demo data
-├── scripts/                db.js, stripe-setup.js, build-demo.js
+├── scripts/                db.js, stripe-setup.js, build-demo.js,
+│                           video/ (walkthrough recorder: make video)
 ├── demo/readaroo-demo.html Single-file offline demo
 ├── capacitor.config.json   Native iOS/Android app setup (builds into mobile/www)
 ├── resources/              App icon and splash screen for the native apps

@@ -1,0 +1,121 @@
+[
+ {
+  "t": 0,
+  "n": 1,
+  "title": "Readaroo in 3 minutes",
+  "persona": "Readaroo",
+  "color": "#FFC93C"
+ },
+ {
+  "t": 7.52,
+  "n": 2,
+  "title": "Five minutes a day counts",
+  "persona": "Arjun",
+  "color": "#FFB020"
+ },
+ {
+  "t": 13.99,
+  "n": 3,
+  "title": "The book he wants is on hold",
+  "persona": "Arjun",
+  "color": "#FFB020"
+ },
+ {
+  "t": 21.8,
+  "n": 4,
+  "title": "The wait becomes a read",
+  "persona": "Arjun",
+  "color": "#FFB020"
+ },
+ {
+  "t": 32.36,
+  "n": 5,
+  "title": "Mid-series? The library can pay",
+  "persona": "Arjun",
+  "color": "#FFB020"
+ },
+ {
+  "t": 51.22,
+  "n": 6,
+  "title": "Too old for him? A grown-up decides",
+  "persona": "Arjun",
+  "color": "#FFB020"
+ },
+ {
+  "t": 71.9,
+  "n": 7,
+  "title": "New authors get found, too",
+  "persona": "Arjun",
+  "color": "#FFB020"
+ },
+ {
+  "t": 91.06,
+  "n": 8,
+  "title": "Only the exceptions reach a parent",
+  "persona": "Priya",
+  "color": "#8B6CFF"
+ },
+ {
+  "t": 99.36,
+  "n": 9,
+  "title": "One tap, with a reason",
+  "persona": "Priya",
+  "color": "#8B6CFF"
+ },
+ {
+  "t": 108.52,
+  "n": 10,
+  "title": "It stops at the cap, every time",
+  "persona": "Priya",
+  "color": "#8B6CFF"
+ },
+ {
+  "t": 125.22,
+  "n": 11,
+  "title": "Every instant borrow is one Stripe charge",
+  "persona": "Library",
+  "color": "#2EC4B6"
+ },
+ {
+  "t": 135.0,
+  "n": 12,
+  "title": "A hard budget, daily and monthly",
+  "persona": "Library",
+  "color": "#2EC4B6"
+ },
+ {
+  "t": 141.79,
+  "n": 13,
+  "title": "Demand as totals, never names",
+  "persona": "Library",
+  "color": "#2EC4B6"
+ },
+ {
+  "t": 156.36,
+  "n": 14,
+  "title": "You asked, the library got it",
+  "persona": "Arjun",
+  "color": "#FFB020"
+ },
+ {
+  "t": 167.23,
+  "n": 15,
+  "title": "Never read alone",
+  "persona": "Priya",
+  "color": "#8B6CFF"
+ },
+ {
+  "t": 179.84,
+  "n": 16,
+  "title": "Every action leaves a record",
+  "persona": "Readaroo",
+  "color": "#FFC93C"
+ },
+ {
+  "t": 187.79,
+  "n": 17,
+  "title": "Try it yourself",
+  "persona": "Readaroo",
+  "color": "#FFC93C"
+ }
+]
